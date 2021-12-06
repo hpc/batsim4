@@ -42,11 +42,6 @@ struct ServerData
     int nb_completed_jobs = 0;  //!< The number of completed jobs
     int nb_submitted_jobs = 0;  //!< The number of submitted jobs
     int nb_running_jobs = 0;    //!< The number of jobs being executed
-
-    //CCU-LANL Additions  just one line
-    int nb_killed_jobs = 0; //!< The number of jobs that have been killed (so we can get the ACTUALLY completed sent to batsim.log)
-
-
     int nb_workflow_submitters_finished = 0; //!< The number of finished workflow submitters
     int nb_switching_machines = 0;  //!< The number of machines being switched
     int nb_waiters = 0; //!< The number of pending CALL_ME_LATER waiters
@@ -138,9 +133,6 @@ void server_on_event_machine_available(ServerData * data,
  */
 void server_on_event_generic(ServerData * data,
                              const Event * event);
-
-void server_on_event_job_fault(ServerData * data,
-                               const Event * event);
 
 /**
  * @brief Server EVENT_OCCURRED handler

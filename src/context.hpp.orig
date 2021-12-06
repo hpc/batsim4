@@ -83,7 +83,6 @@ struct BatsimContext
     int workflow_nb_concurrent_jobs_limit;          //!< Limits the number of concurrent jobs for workflows
 
     std::string batsim_version;                     //!< The Batsim version (got from the BATSIM_VERSION variable that is usually set by the build system)
-    std::string batsched_config="";
 
     ~BatsimContext();
 };

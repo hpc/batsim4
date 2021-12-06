@@ -126,9 +126,6 @@ struct ParallelHomogeneousTotalAmountProfileData
 struct DelayProfileData
 {
     double delay; //!< The time amount, in seconds, that the job is supposed to take
-    
-    //CCU-LANL Additions
-    double real_delay; //!< The time amount that is the actual amount of forward work that is supposed to take place [checkpointing_on]
 };
 
 /**

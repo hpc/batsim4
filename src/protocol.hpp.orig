@@ -206,15 +206,13 @@ public:
      */
     virtual void append_notify_generic_event(const std::string & json_desc,
                                              double date) = 0;
-    virtual void append_notify_job_fault_event(const std::string & notify_type,
-                                              const std::string & job,
-                                             double date) = 0;
+
     /**
      * @brief Appends a REQUESTED_CALL message.
      * @param[in] date The event date. Must be greater than or equal to the previous event.
      * @return Nothing.
      */
-    virtual void append_requested_call(double date,int id,int forWhat) = 0;
+    virtual void append_requested_call(double date) = 0;
 
     // Management functions
     /**
@@ -376,9 +374,6 @@ public:
     void append_notify_resource_event(const std::string & notify_type,
                                       const IntervalSet & resources,
                                       double date);
-    void append_notify_job_fault_event(const std::string & notify_type,
-                                              const std::string & job,
-                                             double date);
 
     /**
      * @brief Appends a NOTIFY event related to a generic external event.
@@ -392,7 +387,7 @@ public:
      * @brief Appends a REQUESTED_CALL message.
      * @param[in] date The event date. Must be greater than or equal to the previous event.
      */
-    void append_requested_call(double date, int id, int forWhat);
+    void append_requested_call(double date);
 
     // Management functions
     /**

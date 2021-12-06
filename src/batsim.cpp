@@ -270,9 +270,42 @@ Other options:
   --forward-unknown-events           Enables the forwarding to the scheduler of external events that
                                      are unknown to Batsim. Ignored if there were no event inputs with --events.
                                      [default: false]
+  --batsched-cfg <sched_option>      String to pass to batsched.  Must be quoted value:opt pairs.
+                                     [default: ]
+  --log-b-log                        If set, turns the additional b_log (batsched_log) logs on.
+                                     Currently FAILURES are the only option
+                                     [default: false]
+Failure Options:
+  --MTBF <time-in-seconds>           The Mean Time Between Failure in seconds
+                                     [default: -1.0]
+  --SMTBF <time-in-seconds>          The System Mean Time Between Failure in seconds
+                                     [default: -1.0]
+  --fixed-failures <time-in-seconds>          Failures will happen every 'time in seconds'
+                                              Can be used in conjunction with SMTBF
+                                              [default: -1.0]
+  --seed-failures                    Enables the seeding of random number generators,
+                                     making the results non-deterministic
+                                     [default: false]
+  --repair-time <time-in-seconds>    Sets a system-wide repair time, in seconds, for a node that goes down
+                                     [default: 0.0]
+  --log-failures                     When set, puts failures and their type in a log file
+                                     [default: false]
+Performance Options:
+  --performance-factor <percentage decimal>   If set this will increase/decrease the real_duration
+                                              of each job by this factor 
+                                              [default: 1.0]
+Checkpointing Options:
+  --checkpointing-on                 Enables checkpointing.
+                                     [default: false]
+  --checkpointing-interval <intrvl>  set the system wide checkpointing interval, float or integer
+                                     [default: -1.0]
+  --compute_checkpointing            Computes optimal checkpointing time for each job
+                                     [default: false]
+  --compute_checkpointing_error <e>  Allows for an error 'e' (double) to computed checkpoints
+                                     [default: 1.0]
   -h, --help                         Shows this help.
 )";
-
+    //CCU-LANL Additions Above ^^ batsched-cfg, Failure Options, Checkpointing Options,Performance Options
     run_simulation = false;
     return_code = 1;
     map<string, docopt::value> args = docopt::docopt(usage, { argv + 1, argv + argc },
@@ -281,6 +314,20 @@ Other options:
     bool error = false;
     return_code = 0;
 
+   //CCU-LANL Additions
+   main_args.performance_factor = (double) ::atof(args["--performance-factor"].asString().c_str());
+   main_args.checkpointing_on = args["--checkpointing-on"].asBool();
+   main_args.compute_checkpointing = args["--compute_checkpointing"].asBool();
+   main_args.compute_checkpointing_error = (double) ::atof(args["--compute_checkpointing_error"].asString().c_str());
+   main_args.MTBF =  (double) ::atof(args["--MTBF"].asString().c_str());
+   main_args.SMTBF = (double) ::atof(args["--SMTBF"].asString().c_str());
+   main_args.global_checkpointing_interval = (double) ::atof(args["--checkpointing-interval"].asString().c_str());
+   main_args.seed_failures = args["--seed-failures"].asBool();
+   main_args.repair_time = atof(args["--repair-time"].asString().c_str());
+   main_args.fixed_failures = atof(args["--fixed-failures"].asString().c_str());
+   main_args.log_b_log = args["--log-b-log"].asBool();
+   
+    
     if (args["--simgrid-version"].asBool())
     {
         int sg_major, sg_minor, sg_patch;
@@ -575,7 +622,9 @@ Other options:
 
     main_args.simgrid_config = args["--sg-cfg"].asStringList();
     main_args.simgrid_logging = args["--sg-log"].asStringList();
-
+    main_args.batsched_config = args["--batsched-cfg"].asString();
+   
+    
     run_simulation = !error;
 }
 
@@ -630,7 +679,18 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
     // Let's create the workloads
     for (const MainArguments::WorkloadDescription & desc : main_args.workload_descriptions)
     {
-        Workload * workload = Workload::new_static_workload(desc.name, desc.filename);
+        //CCU-LANL Additions  The arguments to new_static_workload
+        Workload * workload = Workload::new_static_workload(desc.name,
+                                                             desc.filename,
+                                                             main_args.checkpointing_on,
+                                                             main_args.compute_checkpointing,
+                                                             main_args.compute_checkpointing_error,
+                                                             main_args.MTBF,
+                                                             main_args.SMTBF,
+                                                             main_args.fixed_failures,
+                                                             main_args.repair_time,
+                                                             main_args.performance_factor,
+                                                             main_args.global_checkpointing_interval);
 
         int nb_machines_in_workload = -1;
         workload->load_from_json(desc.filename, nb_machines_in_workload);
@@ -966,6 +1026,18 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("dynamic-jobs-enabled", Value().SetBool(main_args.dynamic_registration_enabled), alloc);
     context->config_json.AddMember("dynamic-jobs-acknowledged", Value().SetBool(main_args.ack_dynamic_registration), alloc);
     context->config_json.AddMember("profile-reuse-enabled", Value().SetBool(!context->garbage_collect_profiles), alloc);
+    
+    //CCU-LANL Additions
+    context->config_json.AddMember("checkpointing_on", Value().SetBool(main_args.checkpointing_on),alloc);
+    context->config_json.AddMember("compute_checkpointing",Value().SetBool(main_args.compute_checkpointing),alloc);
+    context->config_json.AddMember("MTBF",Value().SetDouble(main_args.MTBF),alloc);
+    context->config_json.AddMember("SMTBF",Value().SetDouble(main_args.SMTBF),alloc);
+    context->config_json.AddMember("seed-failures",Value().SetBool(main_args.seed_failures),alloc);
+    context->config_json.AddMember("batsched_config", Value().SetString(main_args.batsched_config.c_str(),alloc),alloc);
+    context->config_json.AddMember("repair_time", Value().SetDouble(main_args.repair_time),alloc);
+    context->config_json.AddMember("fixed_failures",Value().SetDouble(main_args.fixed_failures),alloc);
+    context->config_json.AddMember("log_b_log",Value().SetBool(main_args.log_b_log),alloc);
+    context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
 
     // others
     std::string sched_config;

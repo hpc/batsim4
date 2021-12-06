@@ -10,7 +10,6 @@
 #include <memory>
 
 #include <boost/algorithm/string.hpp>
-#include <rapidjson/document.h>
 
 #include <simgrid/s4u.hpp>
 
@@ -20,7 +19,7 @@
 #include "jobs_execution.hpp"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(server, "server"); //!< Logging
-namespace r = rapidjson;
+
 using namespace std;
 
 void server_process(BatsimContext * context)
@@ -262,10 +261,6 @@ void server_on_job_completed(ServerData * data,
 
     XBT_INFO("Job %s has COMPLETED. %d jobs completed so far",
              job->id.to_cstring(), data->nb_completed_jobs);
-    //CCU-LANL Additions
-    //This is not an error but will display in the log as an error.  If the verbosity is quiet
-    //this will still show up, which is why it is set as XBT_ERROR.
-    XBT_ERROR("%d jobs ACTUALLY completed so far",(data->nb_completed_jobs - data->nb_killed_jobs ));
 
     data->context->proto_writer->append_job_completed(message->job->id.to_string(),
                                                       job_state_to_string(job->state),
@@ -274,16 +269,6 @@ void server_on_job_completed(ServerData * data,
                                                       simgrid::s4u::Engine::get_clock());
 
     data->context->jobs_tracer.write_job(job);
-    r::Document doc;
-    doc.SetObject();
-    r::Document::AllocatorType& myAlloc = doc.GetAllocator();
-    
-    doc.AddMember("type",r::Value().SetString("batsim_metadata",myAlloc),myAlloc);
-    doc.AddMember("job_id",r::Value().SetString(job->id.job_name().c_str(),myAlloc),myAlloc);
-    doc.AddMember("metadata",r::Value().SetString(job->batsim_metadata.c_str(),myAlloc),myAlloc);
-    std::string json_desc = Job::to_json_desc(& doc);
-    //std::replace(json_desc.begin(),json_desc.end(),'\"','\'');
-    data->context->proto_writer->append_notify_generic_event(json_desc,simgrid::s4u::Engine::get_clock());
     data->jobs_to_be_deleted.push_back(message->job->id);
 }
 
@@ -413,17 +398,6 @@ void server_on_event_generic(ServerData * data,
                                                              simgrid::s4u::Engine::get_clock());
 }
 
-void server_on_event_job_fault(ServerData * data,
-                             const Event * event)
-{
-
-    // Just forward the json object
-    auto * event_data = static_cast<JobFaultEventData *>(event->data);
-    data->context->proto_writer->append_notify_job_fault_event("job_fault",
-                                                                event_data->job,
-                                                                simgrid::s4u::Engine::get_clock());
-}
-
 void server_on_event_occurred(ServerData * data,
                               IPMessage * task_data)
 {
@@ -442,9 +416,6 @@ void server_on_event_occurred(ServerData * data,
             break;
         case EventType::EVENT_GENERIC:
             server_on_event_generic(data, event);
-            break;
-        case EventType::EVENT_JOB_FAULT:
-            server_on_event_job_fault(data,event);
             break;
         }
     }
@@ -559,9 +530,8 @@ void server_on_pstate_modification(ServerData * data,
 void server_on_waiting_done(ServerData * data,
                             IPMessage * task_data)
 {
-    xbt_assert(task_data->data != nullptr);
-    auto * message = static_cast<CallMeLaterMessage *>(task_data->data);
-    data->context->proto_writer->append_requested_call(simgrid::s4u::Engine::get_clock(),message->id,message->forWhat);
+    (void) task_data;
+    data->context->proto_writer->append_requested_call(simgrid::s4u::Engine::get_clock());
     --data->nb_waiters;
 }
 
@@ -668,9 +638,6 @@ void server_on_killing_done(ServerData * data,
             data->nb_running_jobs--;
             xbt_assert(data->nb_running_jobs >= 0);
             data->nb_completed_jobs++;
-            //CCU-LANL Additions  increase the amount of killed jobs (right now, being used for ACTUALLY completed in batsim.log)
-            data->nb_killed_jobs++;
-
             xbt_assert(data->nb_completed_jobs + data->nb_running_jobs <= data->nb_submitted_jobs);
 
             really_killed_job_ids_str.push_back(job_id.to_string());
@@ -685,16 +652,6 @@ void server_on_killing_done(ServerData * data,
                 simgrid::s4u::Engine::get_clock());
 
             data->context->jobs_tracer.write_job(job);
-            r::Document doc;
-            doc.SetObject();
-            r::Document::AllocatorType& myAlloc = doc.GetAllocator();
-    
-            doc.AddMember("type",r::Value().SetString("batsim_metadata",myAlloc),myAlloc);
-            doc.AddMember("job_id",r::Value().SetString(job->id.job_name().c_str(),myAlloc),myAlloc);
-            doc.AddMember("metadata",r::Value().SetString(job->batsim_metadata.c_str(),myAlloc),myAlloc);
-            std::string json_desc = Job::to_json_desc(& doc);
-            //std::replace(json_desc.begin(),json_desc.end(),'\"','\'');
-            data->context->proto_writer->append_notify_generic_event(json_desc,simgrid::s4u::Engine::get_clock());
             data->jobs_to_be_deleted.push_back(job->id);
         }
     }
@@ -970,7 +927,7 @@ void server_on_call_me_later(ServerData * data,
     string pname = "waiter " + to_string(message->target_time);
     simgrid::s4u::Actor::create(pname.c_str(),
                                 data->context->machines.master_machine()->host,
-                                waiter_process, message->target_time,data, message->id, message->forWhat);
+                                waiter_process, message->target_time, data);
     ++data->nb_waiters;
 }
 

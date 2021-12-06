@@ -290,8 +290,7 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
         /*
         {
             "type": "delay",
-            "delay": 20.20,
-            "real_delay": 14.20 [optional - not in file but in simulation]
+            "delay": 20.20
         }
         */
         profile->type = ProfileType::DELAY;
