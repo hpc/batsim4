@@ -10,7 +10,6 @@
 #include <fstream>
 
 #include <boost/algorithm/string/join.hpp>
-#include <rapidjson/document.h>
 
 #include <stdlib.h>
 #include <xbt.h>
@@ -19,7 +18,7 @@
 
 #include "context.hpp"
 #include "jobs.hpp"
-namespace r = rapidjson;
+
 using namespace std;
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(export, "export"); //!< Logging
@@ -969,11 +968,9 @@ void JobsTracer::initialize(BatsimContext *context,
     _schedule_filename = schedule_filename;
 
     // Prepare for jobs output file
-    //CCU-LANL Additions mostly 3/4 of the way down  with *'s 
     _job_keys = {
         "job_id",
         "workload_name",
-        "workload_num_machines",
         "profile",
         "submission_time",
         "requested_number_of_resources",
@@ -987,19 +984,8 @@ void JobsTracer::initialize(BatsimContext *context,
         "turnaround_time",
         "stretch",
         "allocated_resources",
-        "checkpoint_time", //*
-        "dump_time",//*
-        "read_time",//*
-        "MTBF",//*
-        "SMTBF",//*
-        "fixed-failures",//*
-        "repair-time",//*
-        "Tc_Error",//*
-        "delay",//*
-        "real_delay",//*
         "consumed_energy",
-        "metadata",//*
-        "batsim_metadata"//*
+        "metadata"
     };
     string header = boost::algorithm::join(_job_keys, ",") + "\n";
     _row_content.reserve(_job_keys.size());
@@ -1127,7 +1113,6 @@ void JobsTracer::write_job(const JobPtr job)
 {
     int success = (job->state == JobState::JOB_STATE_COMPLETED_SUCCESSFULLY);
     bool rejected = (job->state == JobState::JOB_STATE_REJECTED);
-    bool was_killed = (job->state == JobState::JOB_STATE_COMPLETED_KILLED);
 
     // Update counters for the schedule metrics
     _nb_jobs++;
@@ -1155,73 +1140,7 @@ void JobsTracer::write_job(const JobPtr job)
             long double completion_time = job->starting_time + job->runtime;
             long double turnaround_time = completion_time - job->submission_time;
             long double slowdown = turnaround_time / job->runtime;
-            
-            
-            if (job->workload->_checkpointing_on)
-            {
-                double epsilon = .0000002;
-                double runtime = job->runtime;
-                double read_time=job->read_time;
-                double checkpoint_time = job->checkpoint_time;
-                double dump_time = job->dump_time;
-                bool has_checkpointed = false;
-                int num_checkpoints_completed=0;
-                r::Document meta_doc;
-                r::Document batsim_meta_doc;
-                batsim_meta_doc.SetObject();
-                meta_doc.SetObject();
-                std::string meta = job->metadata;
-                std::replace( meta.begin(), meta.end(), '\'', '\"');
-                if (job->metadata !="")
-                    meta_doc.Parse(meta.c_str());
-                if (meta_doc.HasMember("checkpointed"))
-                    has_checkpointed = true;
-                double subtract_read = read_time;
-                double previous_work = 0;
-                int previous_dumps =0;
-                if (has_checkpointed)
-                {
-                        
-                    //progress_time must be subtracted by read_time to see how many checkpoints we have gone through
-                    num_checkpoints_completed = (int) std::floor(epsilon +((runtime-read_time)/(checkpoint_time + dump_time)));
-                    if (meta_doc.HasMember("num_dumps"))
-                        previous_dumps = meta_doc["num_dumps"].GetInt();
-                    if (meta_doc.HasMember("work_progress"))
-                        previous_work = meta_doc["work_progress"].GetDouble();
-                                        
-                }
-                else
-                {
-                    num_checkpoints_completed = (int) std::floor(epsilon+(runtime/(checkpoint_time + dump_time )));   
-                    subtract_read = 0;
-                }
-                XBT_INFO("DEBUG num_checkpoints_completed %d  chk %d  run %f read %f",num_checkpoints_completed, has_checkpointed,runtime,read_time);
-                
-                if (num_checkpoints_completed < 0)
-                    num_checkpoints_completed = 0;
-                
-                double work = 0;
-                if (num_checkpoints_completed > 0 && was_killed)
-                    work = num_checkpoints_completed * checkpoint_time;
-                else if(!was_killed)
-                    work = (runtime - (num_checkpoints_completed * dump_time) - subtract_read);
-                
-                        
-                batsim_meta_doc.AddMember("dumps",r::Value().SetInt(num_checkpoints_completed),batsim_meta_doc.GetAllocator());
-                batsim_meta_doc.AddMember("work",r::Value().SetDouble(work),batsim_meta_doc.GetAllocator());
-                batsim_meta_doc.AddMember("total_dumps",r::Value().SetInt(num_checkpoints_completed + previous_dumps),batsim_meta_doc.GetAllocator());
-                batsim_meta_doc.AddMember("work_progress",r::Value().SetDouble(work+previous_work),batsim_meta_doc.GetAllocator());
-                        
-                
-                std::string meta_str = Job::to_json_desc(&batsim_meta_doc);
-                std::replace(meta_str.begin(),meta_str.end(),'\"','\'');
-                job->batsim_metadata = meta_str;
-            }
-                    
-                
-             
 
-                
             _sum_waiting_time += waiting_time;
             _sum_turnaround_time += turnaround_time;
             _sum_slowdown += slowdown;
@@ -1261,9 +1180,6 @@ void JobsTracer::write_job(const JobPtr job)
     // Set all values to be written
     _job_map["job_id"] = job->id.job_name();
     _job_map["workload_name"] = job->workload->name;
-    //CCU-LANL Additions
-    _job_map["workload_num_machines"] = to_string(static_cast<int>(job->workload->_num_machines));
-    
     _job_map["profile"] = (job->profile)->name;
     _job_map["submission_time"] = to_string(static_cast<double>(job->submission_time));
     _job_map["requested_number_of_resources"] = to_string(job->requested_nb_res);
@@ -1278,27 +1194,7 @@ void JobsTracer::write_job(const JobPtr job)
     _job_map["stretch"] = rejected ? "" : to_string(static_cast<double>((job->starting_time + job->runtime - job->submission_time) / job->runtime));
     _job_map["consumed_energy"] = rejected ? "" : to_string(job->consumed_energy);
     _job_map["allocated_resources"] = job->allocation.to_string_hyphen(" ");
-    //CCU-LANL Additions
-    _job_map["checkpoint_time"] = to_string(static_cast<double>(job->checkpoint_time));
-    _job_map["dump_time"] = to_string(static_cast<double>(job->dump_time));
-    _job_map["read_time"] = to_string(static_cast<double>(job->read_time));
-    _job_map["MTBF"]=job->workload->_MTBF==-1 ? "" : to_string(static_cast<double>(job->workload->_MTBF));
-    _job_map["SMTBF"]=job->workload->_SMTBF==-1 ? "" : to_string(static_cast<double>(job->workload->_SMTBF));
-    _job_map["fixed-failures"] = job->workload->_fixed_failures == -1 ? "" : to_string(static_cast<double>(job->workload->_fixed_failures));
-    _job_map["repair-time"]=to_string(static_cast<double>(job->workload->_repair_time));
-    
-    _job_map["Tc_Error"]=job->workload->_compute_checkpointing == false  ? "" : to_string(static_cast<double>(job->workload->_compute_checkpointing_error));
-    _job_map["delay"]=job->profile->type != ProfileType::DELAY ? "" : to_string(
-                                                    static_cast<double>(
-                                                    static_cast<DelayProfileData *>(
-                                                        job->profile->data)->delay));
-    _job_map["real_delay"]=job->profile->type != ProfileType::DELAY ? "" : to_string(
-                                                    static_cast<double>(
-                                                    static_cast<DelayProfileData *>(
-                                                        job->profile->data)->real_delay));
     _job_map["metadata"] = '"' + job->metadata + '"';
-    _job_map["batsim_metadata"] = '"' + job->batsim_metadata + '"';
-
     // And then write them
     for (string & mit : _job_keys)
     {
