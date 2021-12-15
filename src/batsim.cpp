@@ -691,8 +691,8 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
                                                              main_args.fixed_failures,
                                                              main_args.repair_time,
                                                              main_args.performance_factor,
-                                                             main_args.global_checkpointing_interval,
-                                                             context->machines[0]->speed);
+                                                             main_args.global_checkpointing_interval
+                                                            );
 
         int nb_machines_in_workload = -1;
         workload->load_from_json(desc.filename, nb_machines_in_workload);
@@ -900,6 +900,8 @@ int main(int argc, char * argv[])
     {
         XBT_INFO("The maximum number of machines to use is %d.", max_nb_machines_to_use);
     }
+     // initialyse Ptask L07 model
+    engine.set_config("host/model:ptask_L07");
     //Ok we can create the machines now
     // Let's create the machines
     create_machines(main_args, &context, max_nb_machines_to_use);
@@ -914,8 +916,7 @@ int main(int argc, char * argv[])
     // Let's load the eventLists
     load_eventLists(main_args, &context);
 
-    // initialyse Ptask L07 model
-    engine.set_config("host/model:ptask_L07");
+   
 
     // Let's choose which SimGrid computing model should be used
     XBT_INFO("Checking whether SMPI is used or not...");
