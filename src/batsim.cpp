@@ -887,9 +887,28 @@ int main(int argc, char * argv[])
 
     context.batsim_version = STR(BATSIM_VERSION);
     XBT_INFO("Batsim version: %s", context.batsim_version.c_str());
+    //CCU-LANL Additions
+    //We need to create the machines before making the workloads so we know the speed of the machines
+    //This is okay because we don't really use the nb_res in the workloads file
+   int max_nb_machines_to_use = -1;
+   if (main_args.limit_machines_count > 0)
+    {
+        max_nb_machines_to_use = main_args.limit_machines_count;
+    }
+
+    if (max_nb_machines_to_use != -1)
+    {
+        XBT_INFO("The maximum number of machines to use is %d.", max_nb_machines_to_use);
+    }
+    //Ok we can create the machines now
+    // Let's create the machines
+    create_machines(main_args, &context, max_nb_machines_to_use);
+
+
+
 
     // Let's load the workloads and workflows
-    int max_nb_machines_to_use = -1;
+    
     load_workloads_and_workflows(main_args, &context, max_nb_machines_to_use);
 
     // Let's load the eventLists
@@ -909,8 +928,7 @@ int main(int argc, char * argv[])
         SMPI_init();
     }
 
-    // Let's create the machines
-    create_machines(main_args, &context, max_nb_machines_to_use);
+    
 
     // Let's prepare Batsim's outputs
     XBT_INFO("Batsim's export prefix is '%s'.", context.export_prefix.c_str());
