@@ -478,6 +478,10 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
     
     //CCU-LANL Additions START    till END
+    //since we need to add to the json description and it is a const, this is needed
+    rapidjson::Document json_desc_copy;
+    json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
+
     /*  *************************************************************************************
         *                                                                                   *
         *                            PROFILE DELAY                                          *
@@ -485,9 +489,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         *************************************************************************************
     */
     if (j->profile->type == ProfileType::DELAY){
-        //since we need to add to the json description and it is a const, this is needed
-        rapidjson::Document json_desc_copy;
-        json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
+        
         
         double pf = workload->_performance_factor;
         Document profile_doc;
@@ -582,11 +584,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         
 
 
-        // Let's get the JSON string which originally described the job
-        // (to conserve potential fields unused by Batsim)
-        rapidjson::StringBuffer buffer;  //create a buffer
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);  //set the buffer for the writer
-        json_desc_copy.Accept(writer); //write the json descripition into the buffer.  It will be used below in json_description_tmp
+       
     }
 
     /*  *************************************************************************************
@@ -599,9 +597,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     if (j->profile->type == ProfileType::PARALLEL_HOMOGENEOUS){
         //1 second = ??
         double one_second = workload->_speed;
-        rapidjson::Document json_desc_copy;
-        json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
-        
+                
         double pf = workload->_performance_factor;
         Document profile_doc;
         profile_doc.Parse(j->profile->json_description.c_str());
@@ -693,13 +689,14 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
             
             
         }
-        // Let's get the JSON string which originally described the job
-        // (to conserve potential fields unused by Batsim)
-        rapidjson::StringBuffer buffer;  //create a buffer
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);  //set the buffer for the writer
-        json_desc_copy.Accept(writer); //write the json descripition into the buffer.  It will be used below in json_description_tmp
-
     }
+    // Let's get the JSON string which originally described the job
+    // (to conserve potential fields unused by Batsim)
+    rapidjson::StringBuffer buffer;  //create a buffer
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);  //set the buffer for the writer
+    json_desc_copy.Accept(writer); //write the json descripition into the buffer.  It will be used below in json_description_tmp
+
+    
     //CCU-LANL Additions END
 
     // Let's replace the job ID by its WLOAD!NUMBER counterpart if needed
