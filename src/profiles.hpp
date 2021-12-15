@@ -103,7 +103,7 @@ struct ParallelProfileData
     double * com = nullptr; //!< The communication matrix
 
     //CCU-LANL Additions
-    double * real_cpu = nullptr //!< Amount of cpu (forward work)
+    double * real_cpu = nullptr; //!< Amount of cpu (forward work)
 };
 
 /**
@@ -115,7 +115,7 @@ struct ParallelHomogeneousProfileData
     double com; //!< The communication amount between each pair of nodes
 
     //CCU-LANL Additions
-    double real_cpu  //!< The computation amount on each node (forward work)
+    double real_cpu;  //!< The computation amount on each node (forward work)
 };
 
 /**
@@ -127,7 +127,7 @@ struct ParallelHomogeneousTotalAmountProfileData
     double com; //!< The communication amount to spread over each pair of nodes
 
     //CCU-LANL Additions
-    double real_cpu //!< The computation amount to spread over the nodes (forward work)
+    double real_cpu; //!< The computation amount to spread over the nodes (forward work)
 };
 /**
  * @brief The data associated to DELAY profiles
