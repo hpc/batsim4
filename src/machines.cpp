@@ -288,6 +288,7 @@ void Machines::create_machines(const BatsimContext *context,
     int id = 0;
     for (auto& machine : _compute_nodes)
     {
+        XBT_INFO("machine id: %d",id);
         machine->id = id;
         ++id;
         _machines.push_back(machine);
