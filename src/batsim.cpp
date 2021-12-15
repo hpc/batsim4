@@ -691,7 +691,8 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
                                                              main_args.fixed_failures,
                                                              main_args.repair_time,
                                                              main_args.performance_factor,
-                                                             main_args.global_checkpointing_interval
+                                                             main_args.global_checkpointing_interval,
+                                                             context->machines[0]->speed
                                                             );
 
         int nb_machines_in_workload = -1;
