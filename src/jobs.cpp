@@ -396,6 +396,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                      Workload * workload,
                      const std::string & error_prefix)
 {
+    
     // Create and initialize with default values
     auto j = std::make_shared<Job>();
     j->workload = workload;
@@ -477,108 +478,228 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
     
     //CCU-LANL Additions START    till END
-    //since we need to add to the json description and it is a const, this is needed
-    rapidjson::Document json_desc_copy;
-    json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
-    double pf = workload->_performance_factor;
-    Document profile_doc;
-    profile_doc.Parse(j->profile->json_description.c_str());
-    
-    //performance factor edit.  Edit only parent jobs (not resubmitted)
-    if (j->id.job_name().find("#")== std::string::npos){
-        if (pf != 1.0){
-            //get the job's profile data
-            DelayProfileData * data =static_cast<DelayProfileData *>(j->profile->data);
-            //delay will be changing since we are increasing/decreasing performance
-            double delay = data->delay;
-            profile_doc["delay"]=pf * delay;
-            data->delay = pf * delay;
-            j->profile->json_description = Job::to_json_desc(& profile_doc);
-            j->profile->data = data;
+    /*  *************************************************************************************
+        *                                                                                   *
+        *                            PROFILE DELAY                                          *
+        *                                                                                   *
+        *************************************************************************************
+    */
+    if (j->profile->type == ProfileType::DELAY){
+        //since we need to add to the json description and it is a const, this is needed
+        rapidjson::Document json_desc_copy;
+        json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
+        
+        double pf = workload->_performance_factor;
+        Document profile_doc;
+        profile_doc.Parse(j->profile->json_description.c_str());
+        
+        //performance factor edit.  Edit only parent jobs (not resubmitted)
+        if (j->id.job_name().find("#")== std::string::npos){
+            if (pf != 1.0){
+                //get the job's profile data
+                DelayProfileData * data =static_cast<DelayProfileData *>(j->profile->data);
+                //delay will be changing since we are increasing/decreasing performance
+                double delay = data->delay;
+                profile_doc["delay"]=pf * delay;
+                data->delay = pf * delay;
+                j->profile->json_description = Job::to_json_desc(& profile_doc);
+                j->profile->data = data;
+            }
         }
-    }
 
-    //if checkpointing is on, do all of the following
-    if (workload->_checkpointing_on)
-    {
-        //if the workload has these attributes then set them
-        if(json_desc.HasMember("checkpoint"))
-            j->checkpoint_time = json_desc["checkpoint"].GetDouble();
-        if(json_desc.HasMember("dumptime"))
-            j->dump_time = json_desc["dumptime"].GetDouble();
-        if(json_desc.HasMember("readtime"))
-            j->read_time = json_desc["readtime"].GetDouble();
-        
-        
-        //do this only if it is a non-resubmitted job (it won't have a # in its name)
-        if (j->id.job_name().find("#")== std::string::npos)
+        //if checkpointing is on, do all of the following
+        if (workload->_checkpointing_on)
         {
-            if (pf != 1.0){ //update times with _performance_factor
-            j->dump_time = pf * j->dump_time;
-            j->read_time = pf * j->read_time;
-        }
+            //if the workload has these attributes then set them
+            if(json_desc.HasMember("checkpoint"))
+                j->checkpoint_interval = json_desc["checkpoint"].GetDouble();
+            if(json_desc.HasMember("dumptime"))
+                j->dump_time = json_desc["dumptime"].GetDouble();
+            if(json_desc.HasMember("readtime"))
+                j->read_time = json_desc["readtime"].GetDouble();
             
-            //if we need to compute the optimal checkpointing, do it here
             
-            if (workload->_compute_checkpointing)
+            //do this only if it is a non-resubmitted job (it won't have a # in its name)
+            if (j->id.job_name().find("#")== std::string::npos)
             {
-                //it is computed using MTBF or SMTBF, make sure one of them is set
-                xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
-                //prioritize the SMTBF.  If this is set then make checkpointing calculation based on it, else make it off of MTBF
-                if (workload->_SMTBF !=-1.0)
+                if (pf != 1.0){ //update times with _performance_factor
+                j->dump_time = pf * j->dump_time;
+                j->read_time = pf * j->read_time;
+            }
+                
+                //if we need to compute the optimal checkpointing, do it here
+                
+                if (workload->_compute_checkpointing)
                 {
-                    double M = (workload->_num_machines * workload->_SMTBF)/j->requested_nb_res;
-                    j->checkpoint_time = (workload->_compute_checkpointing_error * sqrt(j->dump_time*2.0 * M))-j->dump_time;
+                    //it is computed using MTBF or SMTBF, make sure one of them is set
+                    xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
+                    //prioritize the SMTBF.  If this is set then make checkpointing calculation based on it, else make it off of MTBF
+                    if (workload->_SMTBF !=-1.0)
+                    {
+                        double M = (workload->_num_machines * workload->_SMTBF)/j->requested_nb_res;
+                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time*2.0 * M))-j->dump_time;
+                    }
+                    else if (workload->_MTBF !=-1.0)
+                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time * 2.0 * workload->_MTBF))-j->dump_time;
+                    xbt_assert(j->checkpoint_interval > 0,"Error with %s checkpoint_interval is computed as negative.  This indicates a problem with the dump_time vs the (S)MTBF",j->id.job_name().c_str());
                 }
-                else if (workload->_MTBF !=-1.0)
-                    j->checkpoint_time = (workload->_compute_checkpointing_error * sqrt(j->dump_time * 2.0 * workload->_MTBF))-j->dump_time;
-                xbt_assert(j->checkpoint_time > 0,"Error with %s checkpoint_time is computed as negative.  This indicates a problem with the dump_time vs the (S)MTBF",j->id.job_name().c_str());
-            }
-            if (workload->_global_checkpointing_interval != -1.0){
-                j->checkpoint_time = (workload->_global_checkpointing_interval)-j->dump_time;
-            }
+                if (workload->_global_checkpointing_interval != -1.0){
+                    j->checkpoint_interval = (workload->_global_checkpointing_interval)-j->dump_time;
+                }
 
-            //get the job's profile data
-            DelayProfileData * data =static_cast<DelayProfileData *>(j->profile->data);
-            //delay will be changing since we are checkpointing
-            double delay = data->delay;
-            int subtract = 0;
-            //save the delay as the real delay -- the actual amount of work to be done
-            data->real_delay = delay;
-            //if no extra time after checkpoint, then no need to do that checkpoint
-            if (std::fmod(delay,j->checkpoint_time) == 0)
-                subtract = 1;
-            //delay is how many checkpoints are needed  * how long it takes to dump + the original delay time
-            if (floor(delay/j->checkpoint_time)>0)
-                delay = (floor(delay / j->checkpoint_time) - subtract )* j->dump_time + delay;
-            data->delay = delay;
-            profile_doc["delay"]=delay;
-            profile_doc.AddMember("original_delay",Value().SetDouble(data->real_delay),profile_doc.GetAllocator());
-            j->profile->json_description = Job::to_json_desc(& profile_doc);
-            j->profile->data = data;
-            XBT_INFO("Total delay %f",delay);
-        //The job object now has the correct values, but its json description does not.  Set these values
-        if (json_desc_copy.HasMember("checkpoint"))
-            json_desc_copy["checkpoint"].SetDouble(j->checkpoint_time);
-        else  
-            json_desc_copy.AddMember("checkpoint",Value().SetDouble(j->checkpoint_time),json_desc_copy.GetAllocator());
+                //get the job's profile data
+                DelayProfileData * data =static_cast<DelayProfileData *>(j->profile->data);
+                //delay will be changing since we are checkpointing
+                double delay = data->delay;
+                int subtract = 0;
+                //save the delay as the real delay -- the actual amount of work to be done
+                data->real_delay = delay;
+                //if no extra time after checkpoint, then no need to do that checkpoint
+                if (std::fmod(delay,j->checkpoint_interval) == 0)
+                    subtract = 1;
+                //delay is how many checkpoints are needed  * how long it takes to dump + the original delay time
+                if (floor(delay/j->checkpoint_interval)>0)
+                    delay = (floor(delay / j->checkpoint_interval) - subtract )* j->dump_time + delay;
+                data->delay = delay;
+                profile_doc["delay"]=delay;
+                profile_doc.AddMember("original_delay",Value().SetDouble(data->real_delay),profile_doc.GetAllocator());
+                j->profile->json_description = Job::to_json_desc(& profile_doc);
+                j->profile->data = data;
+                XBT_INFO("Total delay %f",delay);
+            //The job object now has the correct values, but its json description does not.  Set these values
+            if (json_desc_copy.HasMember("checkpoint"))
+                json_desc_copy["checkpoint"].SetDouble(j->checkpoint_interval);
+            else  
+                json_desc_copy.AddMember("checkpoint",Value().SetDouble(j->checkpoint_interval),json_desc_copy.GetAllocator());
+            }
+            if (json_desc_copy.HasMember("dumptime"))
+                json_desc_copy["dumptime"].SetDouble(j->dump_time);
+            if (json_desc_copy.HasMember("readtime"))
+                json_desc_copy["readtime"].SetDouble(j->read_time);
+            
+            
         }
-        if (json_desc_copy.HasMember("dumptime"))
-            json_desc_copy["dumptime"].SetDouble(j->dump_time);
-        if (json_desc_copy.HasMember("readtime"))
-            json_desc_copy["readtime"].SetDouble(j->read_time);
         
-        
+
+
+        // Let's get the JSON string which originally described the job
+        // (to conserve potential fields unused by Batsim)
+        rapidjson::StringBuffer buffer;  //create a buffer
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);  //set the buffer for the writer
+        json_desc_copy.Accept(writer); //write the json descripition into the buffer.  It will be used below in json_description_tmp
     }
-    
 
+    /*  *************************************************************************************
+        *                                                                                   *
+        *                       PROFILE PARALLEL HOMOGENOUS                                 *
+        *                                                                                   *
+        *************************************************************************************
+    */
+   //CCU-LANL Additions
+    if (j->profile->type == ProfileType::PARALLEL_HOMOGENEOUS){
+        //1 second = ??
+        double one_second = workload->_speed
+        rapidjson::Document json_desc_copy;
+        json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
+        
+        double pf = workload->_performance_factor;
+        Document profile_doc;
+        profile_doc.Parse(j->profile->json_description.c_str());
+        
+        //performance factor edit.  Edit only parent jobs (not resubmitted)
+        if (j->id.job_name().find("#")== std::string::npos){
+            if (pf != 1.0){
+                //get the job's profile data
+                ParallelHomogeneousProfileData * data =static_cast<ParallelHomogeneousProfileData *>(j->profile->data);
+                //cpu will be changing since we are increasing/decreasing performance
+                double cpu = data->cpu;
+                profile_doc["cpu"]=pf * cpu;
+                data->cpu = pf * cpu;
+                j->profile->json_description = Job::to_json_desc(& profile_doc);
+                j->profile->data = data;
+            }
+        }
 
-    // Let's get the JSON string which originally described the job
-    // (to conserve potential fields unused by Batsim)
-    rapidjson::StringBuffer buffer;  //create a buffer
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);  //set the buffer for the writer
-    json_desc_copy.Accept(writer); //write the json descripition into the buffer.  It will be used below in json_description_tmp
-    
+        //if checkpointing is on, do all of the following
+        if (workload->_checkpointing_on)
+        {
+            //if the workload has these attributes then set them
+            if(json_desc.HasMember("checkpoint"))
+                j->checkpoint_interval = json_desc["checkpoint"].GetDouble();
+            if(json_desc.HasMember("dumptime"))
+                j->dump_time = json_desc["dumptime"].GetDouble();
+            if(json_desc.HasMember("readtime"))
+                j->read_time = json_desc["readtime"].GetDouble();
+            
+            
+            //do this only if it is a non-resubmitted job (it won't have a # in its name)
+            if (j->id.job_name().find("#")== std::string::npos)
+            {
+                if (pf != 1.0){ //update times with _performance_factor
+                j->dump_time = pf * j->dump_time;
+                j->read_time = pf * j->read_time;
+            }
+                
+                //if we need to compute the optimal checkpointing, do it here
+                
+                if (workload->_compute_checkpointing)
+                {
+                    //it is computed using MTBF or SMTBF, make sure one of them is set
+                    xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
+                    //prioritize the SMTBF.  If this is set then make checkpointing calculation based on it, else make it off of MTBF
+                    if (workload->_SMTBF !=-1.0)
+                    {
+                        double M = (workload->_num_machines * workload->_SMTBF)/j->requested_nb_res;
+                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time*2.0 * M))-j->dump_time;
+                    }
+                    else if (workload->_MTBF !=-1.0)
+                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time * 2.0 * workload->_MTBF))-j->dump_time;
+                    xbt_assert(j->checkpoint_interval > 0,"Error with %s checkpoint_interval is computed as negative.  This indicates a problem with the dump_time vs the (S)MTBF",j->id.job_name().c_str());
+                }
+                if (workload->_global_checkpointing_interval != -1.0){
+                    j->checkpoint_interval = (workload->_global_checkpointing_interval)-j->dump_time;
+                }
+
+                //get the job's profile data
+                ParallelHomogeneousProfileData * data =static_cast<ParallelHomogeneousProfileData *>(j->profile->data);
+                //delay will be changing since we are checkpointing
+                double cpu = data->cpu;
+                int subtract = 0;
+                //save the delay as the real delay -- the actual amount of work to be done
+                data->real_cpu = cpu;
+                double delay = cpu/one_second;
+                //if no extra time after checkpoint, then no need to do that checkpoint
+                if (std::fmod(delay,j->checkpoint_interval) == 0)
+                    subtract = 1;
+                //delay is how many checkpoints are needed  * how long it takes to dump + the original delay time
+                if (floor(delay/j->checkpoint_interval)>0)
+                    delay = (floor(delay / j->checkpoint_interval) - subtract )* j->dump_time + delay;
+                data->cpu = delay * one_second;
+                profile_doc["cpu"]=delay * one_second;
+                profile_doc.AddMember("original_cpu",Value().SetDouble(data->real_cpu),profile_doc.GetAllocator());
+                j->profile->json_description = Job::to_json_desc(& profile_doc);
+                j->profile->data = data;
+                XBT_INFO("Total delay %f, Total cpu %f",delay,delay * one_second);
+            //The job object now has the correct values, but its json description does not.  Set these values
+            if (json_desc_copy.HasMember("checkpoint"))
+                json_desc_copy["checkpoint"].SetDouble(j->checkpoint_interval);
+            else  
+                json_desc_copy.AddMember("checkpoint",Value().SetDouble(j->checkpoint_interval),json_desc_copy.GetAllocator());
+            }
+            if (json_desc_copy.HasMember("dumptime"))
+                json_desc_copy["dumptime"].SetDouble(j->dump_time);
+            if (json_desc_copy.HasMember("readtime"))
+                json_desc_copy["readtime"].SetDouble(j->read_time);
+            
+            
+        }
+        // Let's get the JSON string which originally described the job
+        // (to conserve potential fields unused by Batsim)
+        rapidjson::StringBuffer buffer;  //create a buffer
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);  //set the buffer for the writer
+        json_desc_copy.Accept(writer); //write the json descripition into the buffer.  It will be used below in json_description_tmp
+
+    }
     //CCU-LANL Additions END
 
     // Let's replace the job ID by its WLOAD!NUMBER counterpart if needed

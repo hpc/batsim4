@@ -679,6 +679,7 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
     // Let's create the workloads
     for (const MainArguments::WorkloadDescription & desc : main_args.workload_descriptions)
     {
+        
         //CCU-LANL Additions  The arguments to new_static_workload
         Workload * workload = Workload::new_static_workload(desc.name,
                                                              desc.filename,
@@ -690,7 +691,8 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
                                                              main_args.fixed_failures,
                                                              main_args.repair_time,
                                                              main_args.performance_factor,
-                                                             main_args.global_checkpointing_interval);
+                                                             main_args.global_checkpointing_interval,
+                                                             context->machines[0]->speed);
 
         int nb_machines_in_workload = -1;
         workload->load_from_json(desc.filename, nb_machines_in_workload);
@@ -1037,6 +1039,8 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("repair_time", Value().SetDouble(main_args.repair_time),alloc);
     context->config_json.AddMember("fixed_failures",Value().SetDouble(main_args.fixed_failures),alloc);
     context->config_json.AddMember("log_b_log",Value().SetBool(main_args.log_b_log),alloc);
+
+
     context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
 
     // others

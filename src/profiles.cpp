@@ -156,6 +156,12 @@ ParallelProfileData::~ParallelProfileData()
         delete[] com;
         com = nullptr;
     }
+
+    if (real_cpu != nullptr)
+    {
+        delete[] real_cpu;
+        real_cpu = nullptr;
+    }
 }
 
 Profile::~Profile()
@@ -291,6 +297,8 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
         {
             "type": "delay",
             "delay": 20.20,
+
+            //CCU-LANL Additions
             "real_delay": 14.20 [optional - not in file but in simulation]
         }
         */
@@ -374,7 +382,10 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
         {
             "type": "parallel_homogeneous",
             "cpu": 10e6,
-            "com": 1e6
+            "com": 1e6,
+
+            CCU-LANL Additions
+            "real_cpu": 10e6    //Not in file but in simulation
         }
         */
         profile->type = ProfileType::PARALLEL_HOMOGENEOUS;
@@ -405,6 +416,9 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
             "type": "parallel_homogeneous_total",
             "cpu": 10e6,
             "com": 1e6
+
+            CCU-LANL Additions
+            "real_cpu": 10e6    //Not in file but in simulation
         }
         */
         profile->type = ProfileType::PARALLEL_HOMOGENEOUS_TOTAL_AMOUNT;

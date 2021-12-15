@@ -64,6 +64,8 @@ void Machines::create_machines(const BatsimContext *context,
         machine->name = sg_host_get_name(host);
         machine->host = host;
         machine->jobs_being_computed = {};
+        //CCU-LANL Additions
+        machine->speed = *(host->get_speed());
 
         machine->properties = *(host->get_properties());
 

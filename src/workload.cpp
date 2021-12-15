@@ -33,7 +33,8 @@ Workload *Workload::new_static_workload(const string & workload_name,
                                        double fixedFailures,
                                        double repair_time,
                                        double performance_factor,
-                                       double global_checkpointing_interval)
+                                       double global_checkpointing_interval,
+                                       double speed)
 {
     Workload * workload = new Workload;
 
@@ -54,6 +55,7 @@ Workload *Workload::new_static_workload(const string & workload_name,
     workload->_repair_time = repair_time;
     workload->_performance_factor = performance_factor;
     workload->_global_checkpointing_interval=global_checkpointing_interval;
+    workload->_speed = speed;
 
     workload->_is_static = true;
     return workload;

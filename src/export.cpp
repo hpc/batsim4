@@ -987,7 +987,7 @@ void JobsTracer::initialize(BatsimContext *context,
         "turnaround_time",
         "stretch",
         "allocated_resources",
-        "checkpoint_time", //*
+        "checkpoint_interval", //*
         "dump_time",//*
         "read_time",//*
         "MTBF",//*
@@ -997,6 +997,8 @@ void JobsTracer::initialize(BatsimContext *context,
         "Tc_Error",//*
         "delay",//*
         "real_delay",//*
+        "cpu",//*
+        "real_cpu",//*
         "consumed_energy",
         "metadata",//*
         "batsim_metadata"//*
@@ -1156,13 +1158,15 @@ void JobsTracer::write_job(const JobPtr job)
             long double turnaround_time = completion_time - job->submission_time;
             long double slowdown = turnaround_time / job->runtime;
             
-            
+            //CCU-LANL Additions
+            double one_second = job->workload->_speed;
             if (job->workload->_checkpointing_on)
             {
                 double epsilon = .0000002;
                 double runtime = job->runtime;
+                double progress = job->progress;  // may go by this instead of runtime in the future
                 double read_time=job->read_time;
-                double checkpoint_time = job->checkpoint_time;
+                double checkpoint_interval = job->checkpoint_interval;
                 double dump_time = job->dump_time;
                 bool has_checkpointed = false;
                 int num_checkpoints_completed=0;
@@ -1183,7 +1187,7 @@ void JobsTracer::write_job(const JobPtr job)
                 {
                         
                     //progress_time must be subtracted by read_time to see how many checkpoints we have gone through
-                    num_checkpoints_completed = (int) std::floor(epsilon +((runtime-read_time)/(checkpoint_time + dump_time)));
+                    num_checkpoints_completed = (int) std::floor(epsilon +((runtime-read_time)/(checkpoint_interval + dump_time)));
                     if (meta_doc.HasMember("num_dumps"))
                         previous_dumps = meta_doc["num_dumps"].GetInt();
                     if (meta_doc.HasMember("work_progress"))
@@ -1192,7 +1196,7 @@ void JobsTracer::write_job(const JobPtr job)
                 }
                 else
                 {
-                    num_checkpoints_completed = (int) std::floor(epsilon+(runtime/(checkpoint_time + dump_time )));   
+                    num_checkpoints_completed = (int) std::floor(epsilon+(runtime/(checkpoint_interval + dump_time )));   
                     subtract_read = 0;
                 }
                 XBT_INFO("DEBUG num_checkpoints_completed %d  chk %d  run %f read %f",num_checkpoints_completed, has_checkpointed,runtime,read_time);
@@ -1202,11 +1206,11 @@ void JobsTracer::write_job(const JobPtr job)
                 
                 double work = 0;
                 if (num_checkpoints_completed > 0 && was_killed)
-                    work = num_checkpoints_completed * checkpoint_time;
+                    work = num_checkpoints_completed * checkpoint_interval;
                 else if(!was_killed)
                     work = (runtime - (num_checkpoints_completed * dump_time) - subtract_read);
-                
-                        
+                if (job->profile->type == ProfileType::PARALLEL_HOMOGENEOUS)
+                    work = work*one_second       
                 batsim_meta_doc.AddMember("dumps",r::Value().SetInt(num_checkpoints_completed),batsim_meta_doc.GetAllocator());
                 batsim_meta_doc.AddMember("work",r::Value().SetDouble(work),batsim_meta_doc.GetAllocator());
                 batsim_meta_doc.AddMember("total_dumps",r::Value().SetInt(num_checkpoints_completed + previous_dumps),batsim_meta_doc.GetAllocator());
@@ -1279,7 +1283,7 @@ void JobsTracer::write_job(const JobPtr job)
     _job_map["consumed_energy"] = rejected ? "" : to_string(job->consumed_energy);
     _job_map["allocated_resources"] = job->allocation.to_string_hyphen(" ");
     //CCU-LANL Additions
-    _job_map["checkpoint_time"] = to_string(static_cast<double>(job->checkpoint_time));
+    _job_map["checkpoint_interval"] = to_string(static_cast<double>(job->checkpoint_interval));
     _job_map["dump_time"] = to_string(static_cast<double>(job->dump_time));
     _job_map["read_time"] = to_string(static_cast<double>(job->read_time));
     _job_map["MTBF"]=job->workload->_MTBF==-1 ? "" : to_string(static_cast<double>(job->workload->_MTBF));
@@ -1288,14 +1292,44 @@ void JobsTracer::write_job(const JobPtr job)
     _job_map["repair-time"]=to_string(static_cast<double>(job->workload->_repair_time));
     
     _job_map["Tc_Error"]=job->workload->_compute_checkpointing == false  ? "" : to_string(static_cast<double>(job->workload->_compute_checkpointing_error));
-    _job_map["delay"]=job->profile->type != ProfileType::DELAY ? "" : to_string(
-                                                    static_cast<double>(
-                                                    static_cast<DelayProfileData *>(
-                                                        job->profile->data)->delay));
-    _job_map["real_delay"]=job->profile->type != ProfileType::DELAY ? "" : to_string(
-                                                    static_cast<double>(
-                                                    static_cast<DelayProfileData *>(
-                                                        job->profile->data)->real_delay));
+    switch (job->profile->type){
+            case ProfileType::DELAY:
+                _job_map["delay"]= to_string(
+                                        static_cast<double>(
+                                            static_cast<DelayProfileData *>(
+                                                job->profile->data)->delay));
+                _job_map["real_delay"]= to_string(
+                                            static_cast<double>(
+                                                static_cast<DelayProfileData *>(
+                                                    job->profile->data)->real_delay));
+                _job_map["cpu"]= "";
+                _job_map["real_cpu"]= "";
+                break;
+            case ProfileType::PARALLEL_HOMOGENEOUS:
+                _job_map["cpu"]= to_string(
+                                        static_cast<double>(
+                                            static_cast<ParallelHomogeneousProfileData *>(
+                                                job->profile->data)->cpu));
+                _job_map["real_cpu"]= to_string(
+                                        static_cast<double>(
+                                            static_cast<ParallelHomogeneousProfileData *(
+                                                job->profile->data)->real_cpu));
+                _job_map["delay"]= "";
+                _job_map["real_delay"]= "";
+                break;
+            case ProfileType::PARALLEL_HOMOGENEOUS_TOTAL_AMOUNT:
+                _job_map["cpu"]= to_string(
+                                        static_cast<double>(
+                                            static_cast<ParallelHomogeneousTotalAmountProfileData *>(
+                                                job->profile->data)->cpu));
+                _job_map["real_cpu"]= to_string(
+                                        static_cast<double>(
+                                            static_cast<ParallelHomogeneousTotalAmountProfileData *(
+                                                job->profile->data)->real_cpu));
+                _job_map["delay"]= "";
+                _job_map["real_delay"]= "";
+                break;
+    }
     _job_map["metadata"] = '"' + job->metadata + '"';
     _job_map["batsim_metadata"] = '"' + job->batsim_metadata + '"';
 

@@ -54,7 +54,8 @@ public:
                                             double fixedFailures = -1,
                                             double repair_time=0.0,
                                             double performance_factor = 1.0,
-                                            double global_checkpointing_interval = -1.0);
+                                            double global_checkpointing_interval = -1.0,
+                                            double speed = 1.0);
 
     /**
      * @brief Builds an empty dynamic Workload (via dynamic allocation)
@@ -123,6 +124,7 @@ public:
     double _fixed_failures=-1.0;
     double _performance_factor = 1.0; //!< multiplied by duration of jobs to simulate performance speed increases
     double _global_checkpointing_interval = -1.0; //!< overrides optimal checkpointing and other per-job checkpointing
+    double _speed; //!< speed of nodes in this workload
 };
 
 

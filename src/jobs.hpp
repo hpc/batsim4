@@ -240,12 +240,14 @@ struct Job
     int return_code = -1; //!< The return code of the job
     
     //CCU-LANL Additions
-    double checkpoint_time = -1.0; //!< Checkpoint interval for this job
+    double checkpoint_interval = -1.0; //!< Checkpoint interval for this job
     double dump_time = -1.0; //!< time it takes for this job to "dump" checkpoint data
     double read_time = -1.0; //!< time it takes for this job to read from checkpointed data
     double MTBF = -1.0; //!< Mean Time Between Failure for all jobs -- was added so it could be written out to out_jobs.csv
     double SMTBF = -1.0; //!< System Mean Time Between Failure for all jobs -- was added so it could be written out to out_jobs.csv
     double error_MTBF = -1.0; //!< error added to optimal checkpoint interval (for testing) -- was added so it could be written out to out_jobs.csv
+    double progress = -1.0; //!< progress of job calculated using compute_job_progress()   -- this is computed when a job is killed in jobs_execution.cpp
+                            //   it is necessary for making sure we keep this value when calculating batsim_meta in export.cpp
 
 public:
     /**

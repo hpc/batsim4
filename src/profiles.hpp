@@ -99,8 +99,11 @@ struct ParallelProfileData
     ~ParallelProfileData();
 
     unsigned int nb_res;    //!< The number of resources
-    double * cpu = nullptr; //!< The computation vector
+    double * cpu = nullptr; //!< The computation vector  including checkpointing work
     double * com = nullptr; //!< The communication matrix
+
+    //CCU-LANL Additions
+    double * real_cpu = nullptr //!< Amount of cpu (forward work)
 };
 
 /**
@@ -108,8 +111,11 @@ struct ParallelProfileData
  */
 struct ParallelHomogeneousProfileData
 {
-    double cpu; //!< The computation amount on each node
+    double cpu; //!< The computation amount on each node including checkpointing times
     double com; //!< The communication amount between each pair of nodes
+
+    //CCU-LANL Additions
+    double real_cpu  //!< The computation amount on each node (forward work)
 };
 
 /**
@@ -117,8 +123,11 @@ struct ParallelHomogeneousProfileData
  */
 struct ParallelHomogeneousTotalAmountProfileData
 {
-    double cpu; //!< The computation amount to spread over the nodes
+    double cpu; //!< The computation amount to spread over the nodes including checkpointing times
     double com; //!< The communication amount to spread over each pair of nodes
+
+    //CCU-LANL Additions
+    double real_cpu //!< The computation amount to spread over the nodes (forward work)
 };
 /**
  * @brief The data associated to DELAY profiles

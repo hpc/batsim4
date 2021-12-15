@@ -577,6 +577,9 @@ void killer_process(BatsimContext * context,
         {
             BatTask * job_progress = job->compute_job_progress();
 
+            //CCU-LANL Additions single statement
+            job->progress = job_progress->current_task_progress_ratio;
+
             // Consistency checks
             if (job->profile->is_parallel_task() ||
                 job->profile->type == ProfileType::DELAY)
