@@ -1210,7 +1210,7 @@ void JobsTracer::write_job(const JobPtr job)
                 else if(!was_killed)
                     work = (runtime - (num_checkpoints_completed * dump_time) - subtract_read);
                 if (job->profile->type == ProfileType::PARALLEL_HOMOGENEOUS)
-                    work = work*one_second       
+                    work = work*one_second;       
                 batsim_meta_doc.AddMember("dumps",r::Value().SetInt(num_checkpoints_completed),batsim_meta_doc.GetAllocator());
                 batsim_meta_doc.AddMember("work",r::Value().SetDouble(work),batsim_meta_doc.GetAllocator());
                 batsim_meta_doc.AddMember("total_dumps",r::Value().SetInt(num_checkpoints_completed + previous_dumps),batsim_meta_doc.GetAllocator());
@@ -1312,7 +1312,7 @@ void JobsTracer::write_job(const JobPtr job)
                                                 job->profile->data)->cpu));
                 _job_map["real_cpu"]= to_string(
                                         static_cast<double>(
-                                            static_cast<ParallelHomogeneousProfileData *(
+                                            static_cast<ParallelHomogeneousProfileData *>(
                                                 job->profile->data)->real_cpu));
                 _job_map["delay"]= "";
                 _job_map["real_delay"]= "";
@@ -1324,7 +1324,7 @@ void JobsTracer::write_job(const JobPtr job)
                                                 job->profile->data)->cpu));
                 _job_map["real_cpu"]= to_string(
                                         static_cast<double>(
-                                            static_cast<ParallelHomogeneousTotalAmountProfileData *(
+                                            static_cast<ParallelHomogeneousTotalAmountProfileData *>(
                                                 job->profile->data)->real_cpu));
                 _job_map["delay"]= "";
                 _job_map["real_delay"]= "";

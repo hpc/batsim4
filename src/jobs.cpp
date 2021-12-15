@@ -598,7 +598,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
    //CCU-LANL Additions
     if (j->profile->type == ProfileType::PARALLEL_HOMOGENEOUS){
         //1 second = ??
-        double one_second = workload->_speed
+        double one_second = workload->_speed;
         rapidjson::Document json_desc_copy;
         json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
         
