@@ -61,7 +61,7 @@ void Machines::create_machines(const BatsimContext *context,
     {
         Machine * machine = new Machine(this);
 
-        machine->name = sg_host_get_name(host);
+        machine->name = host->get_name();
         machine->host = host;
         machine->jobs_being_computed = {};
         //CCU-LANL Additions
@@ -239,7 +239,7 @@ void Machines::create_machines(const BatsimContext *context,
             else
             {
                 // Only one state to check in this case.
-                xbt_assert(sg_host_speed(machine->host) > 0,
+                xbt_assert(machine->host->get_speed() > 0,
                            "Invalid platform file '%s': host '%s' is a compute node but has an invalid (non-positive) computing speed.",
                            context->platform_filename.c_str(), machine->name.c_str());
             }
@@ -439,7 +439,7 @@ long double Machines::total_wattmin(const BatsimContext *context) const
     {
         for (const Machine * m : _machines)
         {
-            total_wattmin += static_cast<long double>(sg_host_get_wattmin_at(m->host, sg_host_get_pstate(m->host)));
+            total_wattmin += static_cast<long double>(sg_host_get_wattmin_at(m->host, m->host->get_pstate()));
         }
     }
     else
