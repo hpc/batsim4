@@ -294,6 +294,9 @@ Performance Options:
   --performance-factor <percentage decimal>   If set this will increase/decrease the real_duration
                                               of each job by this factor 
                                               [default: 1.0]
+  --core-percent <float>             sets the limit on how many cores from a node can be used
+                                     [default: 1.0]
+
 Checkpointing Options:
   --checkpointing-on                 Enables checkpointing.
                                      [default: false]
@@ -326,6 +329,7 @@ Checkpointing Options:
    main_args.repair_time = atof(args["--repair-time"].asString().c_str());
    main_args.fixed_failures = atof(args["--fixed-failures"].asString().c_str());
    main_args.log_b_log = args["--log-b-log"].asBool();
+   main_args.core_percent = (double) std::atof(args["--core-percent"].asString().c_str());
    
     
     if (args["--simgrid-version"].asBool())
@@ -1062,6 +1066,7 @@ void set_configuration(BatsimContext *context,
 
 
     context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
+    context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
 
     // others
     std::string sched_config;

@@ -82,7 +82,8 @@ struct Machine
     std::unordered_map<std::string, std::string> zone_properties; //!< Properties of Zones defined in the platform file
 
     //CCU-LANL Additions
-    double speed; //!< Speed of the host 
+    double speed; //!< Speed of the host
+    int core_count = -1; 
 
     /**
      * @brief Returns whether the Machine has the given role

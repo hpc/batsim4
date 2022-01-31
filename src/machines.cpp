@@ -62,6 +62,7 @@ void Machines::create_machines(const BatsimContext *context,
         Machine * machine = new Machine(this);
 
         machine->name = host->get_name();
+        machine->core_count = host->get_core_count();
         machine->host = host;
         machine->jobs_being_computed = {};
         //CCU-LANL Additions
@@ -239,7 +240,7 @@ void Machines::create_machines(const BatsimContext *context,
             else
             {
                 // Only one state to check in this case.
-                xbt_assert(machine->host->get_speed() > 0,
+                xbt_assert(machine->host->host_speed) > 0,
                            "Invalid platform file '%s': host '%s' is a compute node but has an invalid (non-positive) computing speed.",
                            context->platform_filename.c_str(), machine->name.c_str());
             }
