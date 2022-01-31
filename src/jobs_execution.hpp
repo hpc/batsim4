@@ -47,25 +47,28 @@ int do_delay_task(double sleeptime, double * remaining_time);
 
 /**
  * @brief Execute a BatTask recursively regarding on its profile type
+ * @param[in] type whether the task is sequential or parallel ("sequential" | "parallel")
  * @param[in,out] btask the task to execute
  * @param[in] context usefull information about Batsim context
  * @param[in] allocation the host to execute the task to
  * @param[in,out] remaining_time remaining time of the current task
  * @return the profile return code if successful, -1 if walltime reached, -2 if parallel task has been cancelled
  */
-int execute_task(BatTask * btask,
+int execute_task(std::string type,
+                 BatTask * btask,
                  BatsimContext *context,
                  const SchedulingAllocation * allocation,
                  double * remaining_time);
 
 /**
  * @brief The process in charge of executing a job
+ * @param type Whether the task will be parallel or sequential ("parallel" | "sequential")
  * @param context The BatsimContext
  * @param allocation The job allocation
  * @param notify_server_at_end Whether a message to the server must be sent after job completion
  * @param io_profile The optional IO profile
  */
-void execute_job_process(BatsimContext *context, SchedulingAllocation *allocation, bool notify_server_at_end, ProfilePtr io_profile);
+void execute_job_process(std::string type, BatsimContext *context, SchedulingAllocation *allocation, bool notify_server_at_end, ProfilePtr io_profile);
 
 /**
  * @brief The process in charge of waiting for a given amount of time (related to the NOPMeLater message)

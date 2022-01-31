@@ -214,6 +214,7 @@ Value JsonProtocolWriter::machine_to_json_value(const Machine & machine)
     machine_doc.AddMember("id", Value().SetInt(machine.id), _alloc);
     machine_doc.AddMember("name", Value().SetString(machine.name.c_str(), _alloc), _alloc);
     machine_doc.AddMember("state", Value().SetString(machine_state_to_string(machine.state).c_str(), _alloc), _alloc);
+    machine_doc.AddMember("core_count",Value().SetInt(machine.core_count), _alloc);
     machine_doc.AddMember("speed", Value().SetDouble(machine.speed), _alloc);
 
     Value properties(rapidjson::kObjectType);
@@ -944,6 +945,7 @@ void JsonProtocolReader::handle_execute_job(int event_number,
       "timestamp": 10.0,
       "type": "EXECUTE_JOB",
       "data": {
+        "type":"parallel" | "sequential"
         "job_id": "w12!45",
         "alloc": "2-3",
         "mapping": {"0": "0", "1": "0", "2": "1", "3": "1"}
@@ -969,7 +971,18 @@ void JsonProtocolReader::handle_execute_job(int event_number,
     message->allocation = new SchedulingAllocation;
 
     xbt_assert(data_object.IsObject(), "Invalid JSON message: the 'data' value of event %d (EXECUTE_JOB) should be an object", event_number);
-    xbt_assert(data_object.MemberCount() == 2 || data_object.MemberCount() == 3, "Invalid JSON message: the 'data' value of event %d (EXECUTE_JOB) should be of size in {2,3} (size=%d)", event_number, data_object.MemberCount());
+    xbt_assert(data_object.MemberCount() == 3 || data_object.MemberCount() == 4, "Invalid JSON message: the 'data' value of event %d (EXECUTE_JOB) should be of size in {3,4} (size=%d)", event_number, data_object.MemberCount());
+
+    // ******************
+    // Get Type
+    // ******************
+    // Let's read it from the JSON message
+    xbt_assert(data_object.HasMember("type"), "Invalid JSON message: the 'data' value of event %d (EXECUTE_JOB) should contain a 'job_id' key.", event_number);
+    const Value & type_value = data_object["type"];
+    xbt_assert(type_value.IsString(), "Invalid JSON message: the 'type' value in the 'data' value of event %d (EXECUTE_JOB) should be a string.",event_number);
+    std::string type = type_value.GetString();
+
+    message->type = type;
 
     // ******************
     // Get Job identifier
@@ -983,6 +996,8 @@ void JsonProtocolReader::handle_execute_job(int event_number,
     // Let's retrieve the job identifier
     JobIdentifier job_id = JobIdentifier(job_id_str);
 
+    
+   
     // Retrieve the job behind the identifier
     message->allocation->job = context->workloads.job_at(job_id);
 
