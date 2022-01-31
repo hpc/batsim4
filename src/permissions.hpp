@@ -2,6 +2,7 @@
 
 #include <string>
 
+
 namespace roles {
     /**
      * @brief Represents the different permission that can be attributed to each

@@ -15,7 +15,7 @@
 class Jobs;
 struct Job;
 class Profiles;
-class JobIdentifier;
+struct JobIdentifier;
 struct BatsimContext;
 
 /**
@@ -36,7 +36,6 @@ private:
     Workload(const Workload & other) = delete;
 
 public:
-    //CCU-LANL Additions
     /**
      * @brief Builds an empty static Workload (via dynamic allocation)
      * @details Static workloads correspond to Batsim input files (workloads or workflows)
@@ -45,17 +44,7 @@ public:
      * @return The newly created workload
      */
     static Workload * new_static_workload(const std::string & workload_name,
-                                          const std::string & workload_file,
-                                            bool checkpointing_on = false,
-                                            bool compute_checkpointing = false,
-                                            double compute_checkpointing_error = 1.0,
-                                            double MTBF = -1,
-                                            double SMTBF = -1,
-                                            double fixedFailures = -1,
-                                            double repair_time=0.0,
-                                            double performance_factor = 1.0,
-                                            double global_checkpointing_interval = -1.0,
-                                            double speed = 1.0);
+                                          const std::string & workload_file);
 
     /**
      * @brief Builds an empty dynamic Workload (via dynamic allocation)
@@ -112,19 +101,6 @@ public:
     Jobs * jobs = nullptr; //!< The Jobs of the Workload
     Profiles * profiles = nullptr; //!< The Profiles associated to the Jobs of the Workload
     bool _is_static = false; //!< Whether the workload is dynamic or not
-    
-    //CCU-LANL Additions
-    bool _checkpointing_on = false;  //!< checkpointing has been turned on
-    bool _compute_checkpointing = false; //!< the optimal checkpoint interval is computed
-    double _compute_checkpointing_error = 1.0; //!< the optimal checkpoint interval is multiplied by this error.  For testing purposes.
-    int _num_machines = 0; //!< The amount of machines designated to this workload ("nb_res:" in workload)
-    double _MTBF = -1.0; //!< Mean Time Between Failure (see batsim.hpp for better explanation)
-    double _SMTBF = -1.0; //!< System Mean Time Between Failure (see batsim.hpp for better explanation) 
-    double _repair_time=0.0;
-    double _fixed_failures=-1.0;
-    double _performance_factor = 1.0; //!< multiplied by duration of jobs to simulate performance speed increases
-    double _global_checkpointing_interval = -1.0; //!< overrides optimal checkpointing and other per-job checkpointing
-    double _speed; //!< speed of nodes in this workload
 };
 
 

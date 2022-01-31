@@ -22,19 +22,8 @@ using namespace rapidjson;
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(workload, "workload"); //!< Logging
 
-//CCU-LANL Additions Arguments to this function were added
 Workload *Workload::new_static_workload(const string & workload_name,
-                                        const string & workload_file,
-                                       bool checkpointing_on,
-                                       bool compute_checkpointing,
-                                       double compute_checkpointing_error,
-                                       double MTBF,
-                                       double SMTBF,
-                                       double fixedFailures,
-                                       double repair_time,
-                                       double performance_factor,
-                                       double global_checkpointing_interval,
-                                       double speed)
+                                        const string & workload_file)
 {
     Workload * workload = new Workload;
 
@@ -45,17 +34,6 @@ Workload *Workload::new_static_workload(const string & workload_name,
     workload->jobs->set_workload(workload);
     workload->name = workload_name;
     workload->file = workload_file;
-    //CCU-LANL Additions  Arguments added were stored in the workload
-    workload->_checkpointing_on = checkpointing_on;
-    workload->_compute_checkpointing = compute_checkpointing;
-    workload->_compute_checkpointing_error = compute_checkpointing_error;
-    workload->_MTBF = MTBF;
-    workload->_SMTBF = SMTBF;
-    workload->_fixed_failures = fixedFailures;
-    workload->_repair_time = repair_time;
-    workload->_performance_factor = performance_factor;
-    workload->_global_checkpointing_interval=global_checkpointing_interval;
-    workload->_speed = speed;
 
     workload->_is_static = true;
     return workload;
@@ -107,8 +85,6 @@ void Workload::load_from_json(const std::string &json_filename, int &nb_machines
     nb_machines = nb_res_node.GetInt();
     xbt_assert(nb_machines > 0, "Invalid JSON file '%s': the value of the 'nb_res' field is invalid (%d)",
                json_filename.c_str(), nb_machines);
-    //CCU-LANL Additions  save the amount of machines there are in the workload
-    _num_machines = nb_machines;
 
     profiles->load_from_json(doc, json_filename);
     jobs->load_from_json(doc, json_filename);
@@ -279,8 +255,8 @@ void Workloads::delete_jobs(const vector<JobIdentifier> & job_ids,
 
 void Workloads::insert_workload(const std::string &workload_name, Workload *workload)
 {
-    xbt_assert(!exists(workload_name), "workload '%s' already exists", workload_name.c_str());
-    xbt_assert(!exists(workload->name), "workload '%s' already exists", workload->name.c_str());
+    xbt_assert(!exists(workload_name));
+    xbt_assert(!exists(workload->name));
 
     workload->name = workload_name;
     _workloads[workload_name] = workload;

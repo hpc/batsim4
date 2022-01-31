@@ -20,7 +20,6 @@ enum class EventType
      EVENT_MACHINE_AVAILABLE        //!< The machine becomes available
     ,EVENT_MACHINE_UNAVAILABLE      //!< The machine becomes unavailable
     ,EVENT_GENERIC                  //!< A generic event
-    ,EVENT_JOB_FAULT                //!< Just a test to see if I can make a new event
 };
 
 /**
@@ -52,11 +51,6 @@ struct MachineAvailabilityEventData
 struct GenericEventData
 {
     std::string json_desc_str; //!< The json description of the generic event as a string
-};
-
-struct JobFaultEventData
-{
-    std::string job;
 };
 
 /**

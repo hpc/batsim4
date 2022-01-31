@@ -81,6 +81,9 @@ struct Machine
     std::unordered_map<std::string, std::string> properties; //!< Properties defined in the platform file
     std::unordered_map<std::string, std::string> zone_properties; //!< Properties of Zones defined in the platform file
 
+    //CCU-LANL Additions
+    double speed; //!< Speed of the host 
+
     /**
      * @brief Returns whether the Machine has the given role
      * @param[in] role The role whose presence is to be checked

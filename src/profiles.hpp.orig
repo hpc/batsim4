@@ -25,7 +25,6 @@ enum class ProfileType
     ,PARALLEL_HOMOGENEOUS                      //!< a homogeneous parallel task that executes the given amounts of computation and communication on every node. Its data is of type ParallelHomogeneousProfileData
     ,PARALLEL_HOMOGENEOUS_TOTAL_AMOUNT         //!< a homogeneous parallel task that spreads the given amounts of computation and communication among all the nodes. Its data is of type ParallelHomogeneousTotalAmountProfileData
     ,SMPI                                      //!< a SimGrid MPI time-independent trace. Its data is of type SmpiProfileData
-    ,USAGE_TRACE                               //!< a usage over time trace. Its data is of type UsageTraceData
     ,SEQUENCE                                  //!< non-atomic: it is composed of a sequence of other profiles
     ,PARALLEL_HOMOGENEOUS_PFS                  //!< Read and writes data to a PFS storage nodes. data type ParallelHomogeneousPFSProfileData
     ,DATA_STAGING                              //!< for moving data between the pfs hosts. Its data is of type DataStagingProfileData
@@ -100,11 +99,8 @@ struct ParallelProfileData
     ~ParallelProfileData();
 
     unsigned int nb_res;    //!< The number of resources
-    double * cpu = nullptr; //!< The computation vector  including checkpointing work
+    double * cpu = nullptr; //!< The computation vector
     double * com = nullptr; //!< The communication matrix
-
-    //CCU-LANL Additions
-    double * real_cpu = nullptr; //!< Amount of cpu (forward work)
 };
 
 /**
@@ -112,11 +108,8 @@ struct ParallelProfileData
  */
 struct ParallelHomogeneousProfileData
 {
-    double cpu; //!< The computation amount on each node including checkpointing times
+    double cpu; //!< The computation amount on each node
     double com; //!< The communication amount between each pair of nodes
-
-    //CCU-LANL Additions
-    double real_cpu;  //!< The computation amount on each node (forward work)
 };
 
 /**
@@ -124,11 +117,8 @@ struct ParallelHomogeneousProfileData
  */
 struct ParallelHomogeneousTotalAmountProfileData
 {
-    double cpu; //!< The computation amount to spread over the nodes including checkpointing times
+    double cpu; //!< The computation amount to spread over the nodes
     double com; //!< The communication amount to spread over each pair of nodes
-
-    //CCU-LANL Additions
-    double real_cpu; //!< The computation amount to spread over the nodes (forward work)
 };
 /**
  * @brief The data associated to DELAY profiles
@@ -136,23 +126,12 @@ struct ParallelHomogeneousTotalAmountProfileData
 struct DelayProfileData
 {
     double delay; //!< The time amount, in seconds, that the job is supposed to take
-    
-    //CCU-LANL Additions
-    double real_delay; //!< The time amount that is the actual amount of forward work that is supposed to take place [checkpointing_on]
 };
 
 /**
  * @brief The data associated to SMPI profiles
  */
 struct SmpiProfileData
-{
-    std::vector<std::string> trace_filenames; //!< all defined tracefiles
-};
-
-/**
- * @brief The data associated to USAGE_TRACE profiles
- */
-struct UsageTraceProfileData
 {
     std::vector<std::string> trace_filenames; //!< all defined tracefiles
 };

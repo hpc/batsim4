@@ -31,8 +31,6 @@ std::string event_type_to_string(const EventType & type)
     case EventType::EVENT_GENERIC:
         event_type = "generic";
         break;
-    case EventType::EVENT_JOB_FAULT:
-        event_type = "job_fault";
     }
     return event_type;
 }
@@ -46,9 +44,6 @@ Event::~Event()
         case EventType::EVENT_MACHINE_AVAILABLE:
         case EventType::EVENT_MACHINE_UNAVAILABLE: // consecutive cases without break/etc. is intended here
             delete static_cast<MachineAvailabilityEventData *>(data);
-            break;
-        case EventType::EVENT_JOB_FAULT:
-            delete static_cast<JobFaultEventData *>(data);
             break;
         case EventType::EVENT_GENERIC:
             delete static_cast<GenericEventData *>(data);
@@ -69,10 +64,6 @@ EventType event_type_from_string(const std::string & type_str, const bool unknow
     else if (type_str == "machine_unavailable")
     {
         type = EventType::EVENT_MACHINE_UNAVAILABLE;
-    }
-    else if (type_str == "job_fault")
-    {
-        type = EventType::EVENT_JOB_FAULT;
     }
     else
     {
@@ -121,12 +112,6 @@ Event * Event::from_json(rapidjson::Value & json_desc,
         catch(const std::exception & e) { throw std::runtime_error(std::string("Invalid JSON message: ") + e.what());}
 
         event->data = static_cast<void*>(data);
-    }
-    else if ((event->type == EventType::EVENT_JOB_FAULT))
-    {
-        JobFaultEventData * data = new JobFaultEventData;
-        data->job = json_desc["job"].GetString();
-        event->data =static_cast<void*>(data);
     }
     else if ((event->type == EventType::EVENT_GENERIC) && unknown_as_generic)
     {

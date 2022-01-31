@@ -224,7 +224,7 @@ struct Job
     IntervalSet allocation; //!< The machines on which the job has been executed.
     std::vector<int> smpi_ranks_to_hosts_mapping; //!< If the job uses a SMPI profile, stores which host number each MPI rank should use. These numbers must be in [0,required_nb_res[.
     std::string metadata; //!< Metadata that the scheduler can set on the job
-    std::string batsim_metadata; //!<metadata that batsim sets on a job
+
     // Current state
     JobState state; //!< The current state of the job
     long double starting_time; //!< The time at which the job starts to be executed.
@@ -238,16 +238,6 @@ struct Job
     long double walltime = -1; //!< The job walltime: if the job is executed for more than this amount of time, it will be killed. Set at -1 to disable this behavior
     unsigned int requested_nb_res; //!< The number of resources the job is requested to be executed on
     int return_code = -1; //!< The return code of the job
-    
-    //CCU-LANL Additions
-    double checkpoint_interval = -1.0; //!< Checkpoint interval for this job
-    double dump_time = -1.0; //!< time it takes for this job to "dump" checkpoint data
-    double read_time = -1.0; //!< time it takes for this job to read from checkpointed data
-    double MTBF = -1.0; //!< Mean Time Between Failure for all jobs -- was added so it could be written out to out_jobs.csv
-    double SMTBF = -1.0; //!< System Mean Time Between Failure for all jobs -- was added so it could be written out to out_jobs.csv
-    double error_MTBF = -1.0; //!< error added to optimal checkpoint interval (for testing) -- was added so it could be written out to out_jobs.csv
-    double progress = -1.0; //!< progress of job calculated using compute_job_progress()   -- this is computed when a job is killed in jobs_execution.cpp
-                            //   it is necessary for making sure we keep this value when calculating batsim_meta in export.cpp
 
 public:
     /**
@@ -284,15 +274,6 @@ public:
      * @return true if the job is complete (=has started then finished), false otherwise.
      */
     bool is_complete() const;
-
-    //CCU-LANL Additions
-    /**
-     * @brief turns a rapidjson Document into a json description string
-     * @param[in] doc the rapidjson Document to turn into string
-     * @return The string version of the Document for use in json descriptions
-     */
-    static std::string to_json_desc(rapidjson::Document * doc);
-
 };
 
 /**

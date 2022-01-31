@@ -8,10 +8,8 @@
 
 #include <algorithm>
 #include <fstream>
-#include <random>
 
 #include <boost/algorithm/string/join.hpp>
-#include <rapidjson/document.h>
 
 #include <stdlib.h>
 #include <xbt.h>
@@ -20,7 +18,7 @@
 
 #include "context.hpp"
 #include "jobs.hpp"
-namespace r = rapidjson;
+
 using namespace std;
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(export, "export"); //!< Logging
@@ -611,7 +609,7 @@ void PajeTracer::add_job_kill(const JobIdentifier & job_id, const IntervalSet & 
 
 void PajeTracer::generate_colors(int color_count)
 {
-    xbt_assert(color_count > 0, "wrong call: color_count (%d) must be strictly positive", color_count);
+    xbt_assert(color_count > 0);
 
     const int buf_size = 256;
     int nb_printed;
@@ -638,10 +636,7 @@ void PajeTracer::generate_colors(int color_count)
 
 void PajeTracer::shuffle_colors()
 {
-    std::random_device rd;
-    std::mt19937 g(rd());
-
-    std::shuffle(_colors.begin(), _colors.end(), g);
+    random_shuffle(_colors.begin(), _colors.end());
 }
 
 void PajeTracer::hsv_to_rgb(double h, double s, double v, double & r, double & g, double & b)
@@ -698,7 +693,7 @@ void PajeTracer::hsv_to_rgb(double h, double s, double v, double & r, double & g
 
 PStateChangeTracer::PStateChangeTracer()
 {
-    xbt_assert(_temporary_buffer == nullptr, "wrong call: _temporary_buffer is null");
+    xbt_assert(_temporary_buffer == nullptr);
     _temporary_buffer = static_cast<char*>(malloc(512 * sizeof(char)));
     xbt_assert(_temporary_buffer != NULL, "Couldn't allocate memory");
 }
@@ -728,7 +723,7 @@ PStateChangeTracer::~PStateChangeTracer()
 
 void PStateChangeTracer::add_pstate_change(double time, const IntervalSet & machines, int pstate_after)
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     const string machines_as_string = machines.to_string_hyphen(" ", "-");
     const size_t minimum_buf_size = 256 + machines_as_string.size();
@@ -749,14 +744,14 @@ void PStateChangeTracer::add_pstate_change(double time, const IntervalSet & mach
 
 void PStateChangeTracer::flush()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     _wbuf->flush_buffer();
 }
 
 void PStateChangeTracer::close_buffer()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     delete _wbuf;
     _wbuf = nullptr;
@@ -776,7 +771,7 @@ EnergyConsumptionTracer::~EnergyConsumptionTracer()
 
 void EnergyConsumptionTracer::set_context(BatsimContext *context)
 {
-    xbt_assert(context->energy_used, "wrong call: energy is disabled");
+    xbt_assert(context->energy_used);
     _context = context;
 }
 
@@ -809,14 +804,14 @@ void EnergyConsumptionTracer::add_pstate_change(double date, const IntervalSet &
 
 void EnergyConsumptionTracer::flush()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     _wbuf->flush_buffer();
 }
 
 void EnergyConsumptionTracer::close_buffer()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     delete _wbuf;
     _wbuf = nullptr;
@@ -824,7 +819,7 @@ void EnergyConsumptionTracer::close_buffer()
 
 long double EnergyConsumptionTracer::add_entry(double date, char event_type)
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     long double energy = _context->machines.total_consumed_energy(_context);
     long double wattmin = _context->machines.total_wattmin(_context);
@@ -857,7 +852,7 @@ long double EnergyConsumptionTracer::add_entry(double date, char event_type)
     xbt_assert(nb_printed < buf_size - 1,
                "Writing error: buffer has been completely filled, some information might "
                "have been lost. Please increase Batsim's output temporary buffers' size");
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
     _wbuf->append_text(buf);
 
     free(buf);
@@ -910,8 +905,8 @@ void MachineStateTracer::set_filename(const string &filename)
 
 void MachineStateTracer::write_machine_states(double date)
 {
-    xbt_assert(_context != nullptr, "wrong call: _context is null");
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_context != nullptr);
+    xbt_assert(_wbuf != nullptr);
 
     const std::map<MachineState, int> & numbers = _context->machines.nb_machines_in_each_state();
 
@@ -931,7 +926,7 @@ void MachineStateTracer::write_machine_states(double date)
     xbt_assert(nb_printed < buf_size - 1,
                "Writing error: buffer has been completely filled, some information might "
                "have been lost. Please increase Batsim's output temporary buffers' size");
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
     _wbuf->append_text(buf);
 
     free(buf);
@@ -939,14 +934,14 @@ void MachineStateTracer::write_machine_states(double date)
 
 void MachineStateTracer::flush()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     _wbuf->flush_buffer();
 }
 
 void MachineStateTracer::close_buffer()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
 
     delete _wbuf;
     _wbuf = nullptr;
@@ -973,11 +968,9 @@ void JobsTracer::initialize(BatsimContext *context,
     _schedule_filename = schedule_filename;
 
     // Prepare for jobs output file
-    //CCU-LANL Additions mostly 3/4 of the way down  with *'s 
     _job_keys = {
         "job_id",
         "workload_name",
-        "workload_num_machines",
         "profile",
         "submission_time",
         "requested_number_of_resources",
@@ -991,21 +984,8 @@ void JobsTracer::initialize(BatsimContext *context,
         "turnaround_time",
         "stretch",
         "allocated_resources",
-        "checkpoint_interval", //*
-        "dump_time",//*
-        "read_time",//*
-        "MTBF",//*
-        "SMTBF",//*
-        "fixed-failures",//*
-        "repair-time",//*
-        "Tc_Error",//*
-        "delay",//*
-        "real_delay",//*
-        "cpu",//*
-        "real_cpu",//*
         "consumed_energy",
-        "metadata",//*
-        "batsim_metadata"//*
+        "metadata"
     };
     string header = boost::algorithm::join(_job_keys, ",") + "\n";
     _row_content.reserve(_job_keys.size());
@@ -1133,7 +1113,6 @@ void JobsTracer::write_job(const JobPtr job)
 {
     int success = (job->state == JobState::JOB_STATE_COMPLETED_SUCCESSFULLY);
     bool rejected = (job->state == JobState::JOB_STATE_REJECTED);
-    bool was_killed = (job->state == JobState::JOB_STATE_COMPLETED_KILLED);
 
     // Update counters for the schedule metrics
     _nb_jobs++;
@@ -1161,75 +1140,7 @@ void JobsTracer::write_job(const JobPtr job)
             long double completion_time = job->starting_time + job->runtime;
             long double turnaround_time = completion_time - job->submission_time;
             long double slowdown = turnaround_time / job->runtime;
-            
-            //CCU-LANL Additions
-            double one_second = job->workload->_speed;
-            if (job->workload->_checkpointing_on)
-            {
-                double epsilon = .0000002;
-                double runtime = job->runtime;
-                double progress = job->progress;  // may go by this instead of runtime in the future
-                double read_time=job->read_time;
-                double checkpoint_interval = job->checkpoint_interval;
-                double dump_time = job->dump_time;
-                bool has_checkpointed = false;
-                int num_checkpoints_completed=0;
-                r::Document meta_doc;
-                r::Document batsim_meta_doc;
-                batsim_meta_doc.SetObject();
-                meta_doc.SetObject();
-                std::string meta = job->metadata;
-                std::replace( meta.begin(), meta.end(), '\'', '\"');
-                if (job->metadata !="")
-                    meta_doc.Parse(meta.c_str());
-                if (meta_doc.HasMember("checkpointed"))
-                    has_checkpointed = true;
-                double subtract_read = read_time;
-                double previous_work = 0;
-                int previous_dumps =0;
-                if (has_checkpointed)
-                {
-                        
-                    //progress_time must be subtracted by read_time to see how many checkpoints we have gone through
-                    num_checkpoints_completed = (int) std::floor(epsilon +((runtime-read_time)/(checkpoint_interval + dump_time)));
-                    if (meta_doc.HasMember("num_dumps"))
-                        previous_dumps = meta_doc["num_dumps"].GetInt();
-                    if (meta_doc.HasMember("work_progress"))
-                        previous_work = meta_doc["work_progress"].GetDouble();
-                                        
-                }
-                else
-                {
-                    num_checkpoints_completed = (int) std::floor(epsilon+(runtime/(checkpoint_interval + dump_time )));   
-                    subtract_read = 0;
-                }
-                XBT_INFO("DEBUG num_checkpoints_completed %d  chk %d  run %f read %f",num_checkpoints_completed, has_checkpointed,runtime,read_time);
-                
-                if (num_checkpoints_completed < 0)
-                    num_checkpoints_completed = 0;
-                
-                double work = 0;
-                if (num_checkpoints_completed > 0 && was_killed)
-                    work = num_checkpoints_completed * checkpoint_interval;
-                else if(!was_killed)
-                    work = (runtime - (num_checkpoints_completed * dump_time) - subtract_read);
-                if (job->profile->type == ProfileType::PARALLEL_HOMOGENEOUS)
-                    work = work*one_second;       
-                batsim_meta_doc.AddMember("dumps",r::Value().SetInt(num_checkpoints_completed),batsim_meta_doc.GetAllocator());
-                batsim_meta_doc.AddMember("work",r::Value().SetDouble(work),batsim_meta_doc.GetAllocator());
-                batsim_meta_doc.AddMember("total_dumps",r::Value().SetInt(num_checkpoints_completed + previous_dumps),batsim_meta_doc.GetAllocator());
-                batsim_meta_doc.AddMember("work_progress",r::Value().SetDouble(work+previous_work),batsim_meta_doc.GetAllocator());
-                        
-                
-                std::string meta_str = Job::to_json_desc(&batsim_meta_doc);
-                std::replace(meta_str.begin(),meta_str.end(),'\"','\'');
-                job->batsim_metadata = meta_str;
-            }
-                    
-                
-             
 
-                
             _sum_waiting_time += waiting_time;
             _sum_turnaround_time += turnaround_time;
             _sum_slowdown += slowdown;
@@ -1269,9 +1180,6 @@ void JobsTracer::write_job(const JobPtr job)
     // Set all values to be written
     _job_map["job_id"] = job->id.job_name();
     _job_map["workload_name"] = job->workload->name;
-    //CCU-LANL Additions
-    _job_map["workload_num_machines"] = to_string(static_cast<int>(job->workload->_num_machines));
-    
     _job_map["profile"] = (job->profile)->name;
     _job_map["submission_time"] = to_string(static_cast<double>(job->submission_time));
     _job_map["requested_number_of_resources"] = to_string(job->requested_nb_res);
@@ -1286,57 +1194,7 @@ void JobsTracer::write_job(const JobPtr job)
     _job_map["stretch"] = rejected ? "" : to_string(static_cast<double>((job->starting_time + job->runtime - job->submission_time) / job->runtime));
     _job_map["consumed_energy"] = rejected ? "" : to_string(job->consumed_energy);
     _job_map["allocated_resources"] = job->allocation.to_string_hyphen(" ");
-    //CCU-LANL Additions
-    _job_map["checkpoint_interval"] = to_string(static_cast<double>(job->checkpoint_interval));
-    _job_map["dump_time"] = to_string(static_cast<double>(job->dump_time));
-    _job_map["read_time"] = to_string(static_cast<double>(job->read_time));
-    _job_map["MTBF"]=job->workload->_MTBF==-1 ? "" : to_string(static_cast<double>(job->workload->_MTBF));
-    _job_map["SMTBF"]=job->workload->_SMTBF==-1 ? "" : to_string(static_cast<double>(job->workload->_SMTBF));
-    _job_map["fixed-failures"] = job->workload->_fixed_failures == -1 ? "" : to_string(static_cast<double>(job->workload->_fixed_failures));
-    _job_map["repair-time"]=to_string(static_cast<double>(job->workload->_repair_time));
-    
-    _job_map["Tc_Error"]=job->workload->_compute_checkpointing == false  ? "" : to_string(static_cast<double>(job->workload->_compute_checkpointing_error));
-    switch (job->profile->type){
-            case ProfileType::DELAY:
-                _job_map["delay"]= to_string(
-                                        static_cast<double>(
-                                            static_cast<DelayProfileData *>(
-                                                job->profile->data)->delay));
-                _job_map["real_delay"]= to_string(
-                                            static_cast<double>(
-                                                static_cast<DelayProfileData *>(
-                                                    job->profile->data)->real_delay));
-                _job_map["cpu"]= "";
-                _job_map["real_cpu"]= "";
-                break;
-            case ProfileType::PARALLEL_HOMOGENEOUS:
-                _job_map["cpu"]= to_string(
-                                        static_cast<double>(
-                                            static_cast<ParallelHomogeneousProfileData *>(
-                                                job->profile->data)->cpu));
-                _job_map["real_cpu"]= to_string(
-                                        static_cast<double>(
-                                            static_cast<ParallelHomogeneousProfileData *>(
-                                                job->profile->data)->real_cpu));
-                _job_map["delay"]= "";
-                _job_map["real_delay"]= "";
-                break;
-            case ProfileType::PARALLEL_HOMOGENEOUS_TOTAL_AMOUNT:
-                _job_map["cpu"]= to_string(
-                                        static_cast<double>(
-                                            static_cast<ParallelHomogeneousTotalAmountProfileData *>(
-                                                job->profile->data)->cpu));
-                _job_map["real_cpu"]= to_string(
-                                        static_cast<double>(
-                                            static_cast<ParallelHomogeneousTotalAmountProfileData *>(
-                                                job->profile->data)->real_cpu));
-                _job_map["delay"]= "";
-                _job_map["real_delay"]= "";
-                break;
-    }
     _job_map["metadata"] = '"' + job->metadata + '"';
-    _job_map["batsim_metadata"] = '"' + job->batsim_metadata + '"';
-
     // And then write them
     for (string & mit : _job_keys)
     {
@@ -1348,13 +1206,13 @@ void JobsTracer::write_job(const JobPtr job)
 
 void JobsTracer::flush()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
     _wbuf->flush_buffer();
 }
 
 void JobsTracer::close_buffer()
 {
-    xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");
+    xbt_assert(_wbuf != nullptr);
     delete _wbuf;
     _wbuf = nullptr;
 }

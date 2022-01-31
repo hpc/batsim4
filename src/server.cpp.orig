@@ -668,10 +668,14 @@ void server_on_killing_done(ServerData * data,
             data->nb_running_jobs--;
             xbt_assert(data->nb_running_jobs >= 0, "inconsistency: no jobs are running");
             data->nb_completed_jobs++;
+<<<<<<< HEAD
+            xbt_assert(data->nb_completed_jobs + data->nb_running_jobs <= data->nb_submitted_jobs, "inconsistency: nb_completed_jobs + nb_running_jobs > nb_submitted_jobs");
+=======
             //CCU-LANL Additions  increase the amount of killed jobs (right now, being used for ACTUALLY completed in batsim.log)
             data->nb_killed_jobs++;
 
-            xbt_assert(data->nb_completed_jobs + data->nb_running_jobs <= data->nb_submitted_jobs , "inconsistency: nb_completed_jobs + nb_running_jobs > nb_submitted_jobs");
+            xbt_assert(data->nb_completed_jobs + data->nb_running_jobs <= data->nb_submitted_jobs);
+>>>>>>> delay_to_cpu
 
             really_killed_job_ids_str.push_back(job_id.to_string());
 

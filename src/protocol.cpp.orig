@@ -28,12 +28,12 @@ JsonProtocolWriter::~JsonProtocolWriter()
 
 }
 
-void JsonProtocolWriter::append_requested_call(double date,int id, int forWhat)
+void JsonProtocolWriter::append_requested_call(double date)
 {
     /* {
       "timestamp": 25.5,
       "type": "REQUESTED_CALL",
-      "data": {"id": 2,"forWhat":0}
+      "data": {}
     } */
 
     xbt_assert(date >= _last_date, "Date inconsistency");
@@ -41,17 +41,13 @@ void JsonProtocolWriter::append_requested_call(double date,int id, int forWhat)
     _is_empty = false;
 
     Value event(rapidjson::kObjectType);
-    Value data(rapidjson::kObjectType);
-    data.AddMember("id", Value().SetInt(id),_alloc);
-    data.AddMember("forWhat", Value().SetInt(forWhat),_alloc);
-
     event.AddMember("timestamp", Value().SetDouble(date), _alloc);
     event.AddMember("type", Value().SetString("REQUESTED_CALL"), _alloc);
-    event.AddMember("data", data, _alloc);
+    event.AddMember("data", Value().SetObject(), _alloc);
 
     _events.PushBack(event, _alloc);
 }
-//CCU-LANL Additions added job information to send over to scheduler
+
 void JsonProtocolWriter::append_simulation_begins(Machines & machines,
                                                   Workloads & workloads,
                                                   const Document & configuration,
@@ -88,17 +84,6 @@ void JsonProtocolWriter::append_simulation_begins(Machines & machines,
           "1s3fa1f5d1": "workload0.json",
           "41d51f8d4f": "workload1.json",
         }
-        "jobs": {
-          "w0":{
-            "job1": {
-                "subtime": 2.0,
-                "walltime": 3.0
-            },
-            "job2":{
-                "subtime": 4.0,
-                "walltime": 3.0
-            }
-          }
         "profiles": {
           "1s3fa1f5d1": {
             "delay_10s": {
@@ -156,29 +141,13 @@ void JsonProtocolWriter::append_simulation_begins(Machines & machines,
 
     Value workloads_dict(rapidjson::kObjectType);
     Value profiles_dict(rapidjson::kObjectType);
-    Value jobs_dict(rapidjson::kObjectType); //CCU-LANL Additions
     for (const auto & workload : workloads.workloads())
     {
         workloads_dict.AddMember(
             Value().SetString(workload.first.c_str(), _alloc),
             Value().SetString(workload.second->file.c_str(), _alloc),
             _alloc);
-        //CCU-LANL Additions START to END
-        Value jobs(rapidjson::kArrayType);
-        for (const auto & job : workload.second->jobs->jobs())
-        {
-            if (job.second.get() != nullptr) // unused profiles may have been removed from memory at workload loading time.
-            {
-                
-                const string & job_json_description = job.second->json_description;
-                jobs.PushBack(Value().SetString(job_json_description.c_str(),_alloc),_alloc);
-            }
-        }
-        jobs_dict.AddMember(
-            Value().SetString(workload.first.c_str(), _alloc),
-            jobs,_alloc);
-        //CCU-LANL Additions END
-        
+
         Value profile_dict(rapidjson::kObjectType);
         for (const auto & profile : workload.second->profiles->profiles())
         {
@@ -197,7 +166,6 @@ void JsonProtocolWriter::append_simulation_begins(Machines & machines,
                 profile_dict, _alloc);
     }
     data.AddMember("workloads", workloads_dict, _alloc);
-    data.AddMember("jobs",jobs_dict,_alloc); //CCU-LANL Additions
     data.AddMember("profiles", profiles_dict, _alloc);
 
     Value event(rapidjson::kObjectType);
@@ -214,7 +182,6 @@ Value JsonProtocolWriter::machine_to_json_value(const Machine & machine)
     machine_doc.AddMember("id", Value().SetInt(machine.id), _alloc);
     machine_doc.AddMember("name", Value().SetString(machine.name.c_str(), _alloc), _alloc);
     machine_doc.AddMember("state", Value().SetString(machine_state_to_string(machine.state).c_str(), _alloc), _alloc);
-    machine_doc.AddMember("speed", Value().SetDouble(machine.speed), _alloc);
 
     Value properties(rapidjson::kObjectType);
     for(auto const &entry : machine.properties)
@@ -297,7 +264,7 @@ void JsonProtocolWriter::append_job_submitted(const string & job_id,
     {
         Document job_description_doc;
         job_description_doc.Parse(job_json_description.c_str());
-        xbt_assert(!job_description_doc.HasParseError(), "JSON parse error");
+        xbt_assert(!job_description_doc.HasParseError());
 
         data.AddMember("job", Value().CopyFrom(job_description_doc, _alloc), _alloc);
 
@@ -305,7 +272,7 @@ void JsonProtocolWriter::append_job_submitted(const string & job_id,
         {
             Document profile_description_doc;
             profile_description_doc.Parse(profile_json_description.c_str());
-            xbt_assert(!profile_description_doc.HasParseError(), "JSON parse error");
+            xbt_assert(!profile_description_doc.HasParseError());
 
             data.AddMember("profile", Value().CopyFrom(profile_description_doc, _alloc), _alloc);
         }
@@ -560,7 +527,7 @@ void JsonProtocolWriter::append_query_estimate_waiting_time(const string &job_id
 
     Document job_description_doc;
     job_description_doc.Parse(job_json_description.c_str());
-    xbt_assert(!job_description_doc.HasParseError(), "JSON parse error");
+    xbt_assert(!job_description_doc.HasParseError());
     estimate_object.AddMember("job_id", Value().SetString(job_id.c_str(), _alloc), _alloc);
     estimate_object.AddMember("job", Value().CopyFrom(job_description_doc, _alloc), _alloc);
 
@@ -658,31 +625,6 @@ void JsonProtocolWriter::append_notify_resource_event(const std::string & notify
 
     _events.PushBack(event, _alloc);
 }
-void JsonProtocolWriter::append_notify_job_fault_event(const std::string & notify_type,
-                                              const std::string & job,
-                                             double date)
-{
-    
-    /*{
-        "timestamp":50.0,
-        "type": "NOTIFY",
-        "data": {"type":"job_fault", "job":"w0!3"}
-      } */
-        _last_date=date;
-        _is_empty = false;
-        Value data(rapidjson::kObjectType);
-        data.AddMember("type",Value().SetString(notify_type.c_str(),_alloc),_alloc);
-        data.AddMember("job",Value().SetString(job.c_str(), _alloc),_alloc);
-        
-        Value event(rapidjson::kObjectType);
-        event.AddMember("timestamp",Value().SetDouble(date), _alloc);
-        event.AddMember("type", Value().SetString("NOTIFY"), _alloc);
-        event.AddMember("data",data,_alloc);
-        
-        _events.PushBack(event, _alloc);
-        
-      
-}
 
 void JsonProtocolWriter::append_notify_generic_event(const std::string & json_desc_str,
                                                      double date)
@@ -704,13 +646,12 @@ void JsonProtocolWriter::append_notify_generic_event(const std::string & json_de
 
     Document event_doc;
     event_doc.Parse(json_desc_str.c_str());
-    xbt_assert(!event_doc.HasParseError(), "JSON parse error");
+    xbt_assert(!event_doc.HasParseError());
     event.AddMember("data", Value().CopyFrom(event_doc, _alloc), _alloc);
 
 
     _events.PushBack(event, _alloc);
 }
-
 
 
 void JsonProtocolWriter::clear()
@@ -1069,7 +1010,7 @@ void JsonProtocolReader::handle_execute_job(int event_number,
             message->allocation->mapping.push_back(mit->second);
         }
 
-        xbt_assert(message->allocation->mapping.size() == mapping_map.size(), "internal inconsistency on mapping size");
+        xbt_assert(message->allocation->mapping.size() == mapping_map.size());
     }
 
     // *************************************
@@ -1195,28 +1136,18 @@ void JsonProtocolReader::handle_call_me_later(int event_number,
     /* {
       "timestamp": 10.0,
       "type": "CALL_ME_LATER",
-      "data": {"timestamp": 25.5,"id": 2,"forWhat": 0}
-      
-      forWhat is an enum call_me_later_type
+      "data": {"timestamp": 25.5}
     } */
 
     auto * message = new CallMeLaterMessage;
 
     xbt_assert(data_object.IsObject(), "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should be an object", event_number);
-    xbt_assert(data_object.MemberCount() == 3, "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should be of size 3 (size=%d)", event_number, data_object.MemberCount());
+    xbt_assert(data_object.MemberCount() == 1, "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should be of size 1 (size=%d)", event_number, data_object.MemberCount());
 
     xbt_assert(data_object.HasMember("timestamp"), "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should contain a 'timestamp' key.", event_number);
-    xbt_assert(data_object.HasMember("id"),"Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should contain an 'id' key.",event_number);
-    xbt_assert(data_object.HasMember("forWhat"),"Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should contain a 'forWhat' key.",event_number);
     const Value & timestamp_value = data_object["timestamp"];
     xbt_assert(timestamp_value.IsNumber(), "Invalid JSON message: the 'timestamp' value in the 'data' value of event %d (CALL_ME_LATER) should be a number.", event_number);
-    const Value & forWhat_value = data_object["forWhat"];
-    xbt_assert(forWhat_value.IsNumber(),"Invalid JSON message: the 'forWhat' value in the 'data' value of event %d (CALL_ME_LATER) should be a number (enum call_me_later_type) ",event_number);
-     const Value & id_value = data_object["id"];
-    xbt_assert(forWhat_value.IsNumber(),"Invalid JSON message: the 'id' value in the 'data' value of event %d (CALL_ME_LATER) should be a number ",event_number);
     message->target_time = timestamp_value.GetDouble();
-    message->forWhat = forWhat_value.GetInt();
-    message->id = id_value.GetInt();
 
     if (message->target_time < simgrid::s4u::Engine::get_clock())
     {

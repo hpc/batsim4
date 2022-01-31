@@ -203,7 +203,7 @@ struct KillJobMessage
 struct PStateModificationMessage
 {
     IntervalSet machine_ids; //!< The IDs of the machines on which the pstate should be changed
-    unsigned long new_pstate; //!< The power state into which the machines should be put
+    int new_pstate; //!< The power state into which the machines should be put
 };
 
 /**
@@ -212,9 +212,6 @@ struct PStateModificationMessage
 struct CallMeLaterMessage
 {
     double target_time; //!< The time at which Batsim should send a message to the decision real process
-    int id; // CCU-LANL ADDITION
-    int forWhat; // CCU-LANL ADDITION
-    
 };
 
 /**
@@ -244,7 +241,7 @@ struct SchedWaitAnswerMessage
 struct SwitchMessage
 {
     int machine_id; //!< The unique number of the machine which should be switched ON
-    unsigned long new_pstate; //!< The power state the machine should be put into
+    int new_pstate; //!< The power state the machine should be put into
 };
 
 /**

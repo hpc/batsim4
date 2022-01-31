@@ -930,7 +930,15 @@ int main(int argc, char * argv[])
         SMPI_init();
     }
 
+<<<<<<< HEAD
+    // Register Batsim replay functions
+    xbt_replay_action_register("m_usage", usage_trace_replayer);
+
+    // Let's create the machines
+    create_machines(main_args, &context, max_nb_machines_to_use);
+=======
     
+>>>>>>> delay_to_cpu
 
     // Let's prepare Batsim's outputs
     XBT_INFO("Batsim's export prefix is '%s'.", context.export_prefix.c_str());
