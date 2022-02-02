@@ -294,6 +294,9 @@ Performance Options:
   --performance-factor <percentage decimal>   If set this will increase/decrease the real_duration
                                               of each job by this factor 
                                               [default: 1.0]
+  --share-packing                    if set, will pack single resource jobs onto one node until
+                                     that node reaches '--core-percent' * available cores
+                                     [default: false]
   --core-percent <float>             sets the limit on how many cores from a node can be used
                                      [default: 1.0]
 
@@ -330,6 +333,7 @@ Checkpointing Options:
    main_args.fixed_failures = atof(args["--fixed-failures"].asString().c_str());
    main_args.log_b_log = args["--log-b-log"].asBool();
    main_args.core_percent = (double) std::atof(args["--core-percent"].asString().c_str());
+   main_args.share_packing = args["--share-packing"].asBool();
    
     
     if (args["--simgrid-version"].asBool())
@@ -1066,7 +1070,9 @@ void set_configuration(BatsimContext *context,
 
 
     context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
+    context->config_json.AddMember("share-packing", Value().SetBool(main_args.share_packing),alloc);
     context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
+
 
     // others
     std::string sched_config;
