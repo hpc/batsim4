@@ -341,11 +341,11 @@ int execute_task(std::string type,
                 unsigned int * finished_rank = nullptr;
                 if (has_walltime)
                 {
-                    finished_rank = termination_mbox->get<unsigned int>(*remaining_time);
+                    finished_rank = static_cast<unsigned int>(termination_mbox->get(*remaining_time));
                 }
                 else
                 {
-                    finished_rank = termination_mbox->get<unsigned int>();
+                    finished_rank = static_cast<unsigned int>(termination_mbox->get());
                 }
 
                 xbt_assert(child_actors.count(*finished_rank) == 1, "Internal error: unexpected rank received (%u)", *finished_rank);
