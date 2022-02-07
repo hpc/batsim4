@@ -341,7 +341,7 @@ int execute_task(std::string type,
                 unsigned int * finished_rank = nullptr;
                 if (has_walltime)
                 {
-                    finished_rank = termination_mbox->get<unsigned int>(*remaining_time));
+                    finished_rank = termination_mbox->get<unsigned int>(*remaining_time);
                 }
                 else
                 {
