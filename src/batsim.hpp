@@ -127,8 +127,8 @@ struct MainArguments
     double fixed_failures = -1.0; //!< a global time for fixed failures to happen.  Does exactly what SMTBF does except not random times and not based on some distribution. Mostly for debugging.
     bool log_b_log = false; // !< whether to log failures at expe-out/log/failures.log
     bool share_packing = false; //!< Whether to pack single resource jobs onto one node until core_percent*cores are taken up
-    double core_percent = 1.0;                              //!< percent of the cores to use on shared machines
-
+    double core_percent = 1.0;   //!< percent of the cores to use on shared machines
+    long share_packing_holdback = 0;
 };
 
 /**
