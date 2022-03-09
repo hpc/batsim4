@@ -1075,7 +1075,7 @@ void set_configuration(BatsimContext *context,
 
     context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
     context->config_json.AddMember("share-packing", Value().SetBool(main_args.share_packing),alloc);
-    context->config_json.AddMember("share-packing-holdback",Value().SetInteger((int)main_args.share_packing_holdback),alloc);
+    context->config_json.AddMember("share-packing-holdback",Value().SetInt((int)main_args.share_packing_holdback),alloc);
     context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
 
 
