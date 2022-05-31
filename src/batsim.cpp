@@ -275,6 +275,11 @@ Other options:
   --log-b-log                        If set, turns the additional b_log (batsched_log) logs on.
                                      Currently FAILURES are the only option
                                      [default: false]
+Workload Options:
+  --shuffle-jobs                     Meant to be used when all jobs arrive at time zero,
+                                     This will randomly shuffle the jobs.  Will require
+                                     multiple runs and averages (Monte Carlo)
+                                     [default: false]
 Failure Options:
   --MTBF <time-in-seconds>           The Mean Time Between Failure in seconds
                                      [default: -1.0]
@@ -338,6 +343,7 @@ Checkpointing Options:
    main_args.core_percent = (double) std::atof(args["--core-percent"].asString().c_str());
    main_args.share_packing = args["--share-packing"].asBool();
    main_args.share_packing_holdback = args["--share-packing-holdback"].asLong();
+   main_args.shuffle_jobs = args["--shuffle-jobs"].asBool();
    
     
     if (args["--simgrid-version"].asBool())

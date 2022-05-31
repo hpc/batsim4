@@ -129,6 +129,7 @@ struct MainArguments
     bool share_packing = false; //!< Whether to pack single resource jobs onto one node until core_percent*cores are taken up
     double core_percent = 1.0;   //!< percent of the cores to use on shared machines
     long share_packing_holdback = 0;
+    bool shuffle_jobs = false;
 };
 
 /**
