@@ -1,0 +1,441 @@
+%%This is a very basic article template.
+%%There is just one section and two subsections.
+\documentclass[titlepage]{article}
+\author{Craig Walker}
+\title{CCU-LANL-Batsim-Framework-Guide}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{helvet}
+\usepackage{fontspec}
+\usepackage{fontawesome}
+\usepackage{listings}
+\usepackage{soul}
+\usepackage{xparse}
+\usepackage{fvextra}
+
+
+\usepackage{xunicode}
+\usepackage{xltxtra}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{hhline}
+\usepackage[bookmarks,bookmarksopen,bookmarksdepth=5,colorlinks=true]{hyperref}
+\usepackage{bookmark}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, filecolor=blue, urlcolor=blue}
+\usepackage{polyglossia}
+\usepackage[most]{tcolorbox}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{lstlinebgrd}
+\usepackage{sectsty}
+\usepackage{titlesec}
+\usepackage{fancyvrb,newverbs,xcolor}
+\setdefaultlanguage[variant=american]{english}
+% Text styles
+\definecolor{hi-light-yellow}{HTML}{FFFF6D}
+\definecolor{hi-light-orange}{HTML}{FFE994}
+\definecolor{hi-light-pink}{HTML}{FFD8CE}
+\definecolor{hi-light-purple}{HTML}{E0C2CD}
+\definecolor{hi-light-green}{HTML}{E8F2A1}
+\definecolor{hi-yellow}{HTML}{FFFF00}
+\definecolor{lightest-gray}{gray}{.97}
+\definecolor{codelist}{RGB}{237, 204, 152}
+\colorlet{codelist-light}{codelist!50}
+\colorlet{terminal-light}{black!15}
+\definecolor{code-blue}{RGB}{89,131,176}
+\definecolor{easter-blue}{RGB}{0,200,255}
+\definecolor{myLightBlue}{RGB}{0,100,255}
+\colorlet{lightest-blue}{easter-blue!10}
+\colorlet{explanation-code}{myLightBlue!23}
+% New Commands
+\let\oldsection\section
+\newcommand\spsection{\oldsection} % same page section
+\renewcommand\section{\clearpage\oldsection}
+\makeatletter
+\titleformat*{\section}{\LARGE\bfseries}
+\titleformat*{\subsection}{\Large\bfseries}
+\titleformat*{\subsubsection}{\large\bfseries}
+\titleformat*{\paragraph}{\normalsize\bfseries}
+\titleformat*{\subparagraph}{\small\bfseries}
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}{-3.25ex \@plus1ex \@minus.2ex}{10pt}{\sffamily\normalsize\bfseries}}
+\renewcommand\subparagraph{\@startsection{subparagraph}{4}{\z@}{-3.25ex \@plus1ex \@minus.2ex}{10pt}{\sffamily\small\bfseries}}
+%\definecolor{explanation-code}{RGB}{50,150,255}
+
+\newenvironment{expverbatim}
+ {\SaveVerbatim{cverb}}
+ {\endSaveVerbatim
+  \flushleft\fboxrule=0pt\fboxsep=.5em
+  \colorbox{explanation-code}{%
+    \makebox[\dimexpr\linewidth-2\fboxsep][l]{\BUseVerbatim{cverb}}%
+  }
+  \endflushleft
+}
+% types of explanation boxes
+\newcommand\infoC{\faInfoCircle}
+\newcommand\alertC{\faExclamationCircle}
+\newcommand\alertT{\faExclamationTriangle}
+%
+\AfterEndEnvironment{explanation}{\color{black}}
+\AfterEndEnvironment{itemize}{\color{black}}
+\AfterEndEnvironment{enumerate}{\color{black}}
+\AfterEndEnvironment{description}{\color{black}}
+
+%\renewcommand{\familydefault}{\sfdefault}
+\newenvironment{regular}{\color{black}}{}
+\usepackage{marvosym}
+
+
+%-------------------------------------------------------------------
+%                            Background Color Ranges
+%-------------------------------------------------------------------
+\usepackage{pgf}
+\usepackage{pgffor}
+
+\makeatother
+\newcommand\myIfRange[3]{%
+\ifnum\value{lstnumber}>\numexpr#1-1\relax
+	\ifnum\value{lstnumber}<\numexpr#2+1\relax
+		\color{#3}
+	\fi
+\fi}
+\newcommand\myIf[2]{%
+\ifnum\value{lstnumber}=#1
+	\color{#2}
+\fi}
+\newcommand\myStart{\color{lightest-gray}}
+\newcommand\myTitle{What This Code Does}
+					
+					
+%--------------------------------------------------------------------
+
+%--------------------------------------------------------------------
+						
+\NewTCBListing{code}{ O{} }{%
+  breakable,
+  left=5pt,
+  colback=codelist!50,
+  colframe=codelist!50,
+  arc=2pt,
+  boxrule=0pt,  
+  listing only,
+  coltext=code-blue,
+  listing options={showstringspaces=false,language=c,style=CODE-STYLE,tabsize=1,#1}
+}
+\NewTCBListing{terminal}{ O{style=TERMINAL} }{%
+  top=-1mm,
+  bottom=-1mm,
+  before skip=10pt,
+  after skip=10pt,
+  colback=black!15,
+  colframe=black!15,
+  arc=2pt,
+  boxrule=0pt,
+  listing only,
+  listing options={tabsize=1,#1}
+}
+\NewTCBListing{explanation}{ O{style=EXPLANATION-STYLE} m m}{%
+	enhanced,
+	colback=myLightBlue!30,
+	colframe=myLightBlue!30!black!90,
+	coltitle=lightest-blue!50,
+	fonttitle={\fontsize{20}{30}\bfseries},
+	listing only,
+	breakable,
+	arc=5pt,
+	title={#2 \large \quad #3},
+	listing options={showstringspaces=false,showtabs=false,escapechar=@|,#1}
+}
+\setlength\parindent{0pt}
+\setcounter{tocdepth}{5} 
+\setcounter{secnumdepth}{5}
+\definecolor{myTerminalRed}{RGB}{201, 60, 73}
+\definecolor{myExplanationRed}{RGB}{160,40,100}
+\setmonofont{DejaVu Sans Mono}
+
+
+\makeatletter
+
+\newcommand\mytokens[3]{\mytokenshelp{#1}{#2}#3 \relax\relax}
+\def\mytokenshelp#1#2#3 #4\relax{\allowbreak\grayspace\tokenscolor{#1}{#2}{#3}\ifx\relax#4\else
+ \mytokenshelp{#1}{#2}#4\relax\fi}
+\newcommand\tokenscolor[3]{\colorbox{#1}{\textcolor{#2}{%
+  \small\ttfamily\mystrut\smash{\detokenize{#3}}}}}
+\def\mystrut{\rule[\dimexpr-\dp\strutbox+\fboxsep]{0pt}{%
+ \dimexpr\normalbaselineskip-2\fboxsep}}
+\def\grayspace{\hspace{0pt minus \fboxsep}}
+\newcommand{\lstTerm}[1]{\mytokens{black!15}{myTerminalRed}{#1}}
+\newcommand{\lstFolder}[1]{\mytokens{black!15}{blue!70}{#1}}
+\newcommand{\lstCode}[1]{\mytokens{codelist!50}{code-blue}{#1}}
+
+%\NewDocumentCommand{\lstCode}{v}{\sethlcolor{codelist-light}\texthl{\Verb{#1}}}
+%\newcommand{\lstCode}[1]{\hl{\Verb#1}}
+%\soulregister\lstCode1
+%\newcommand{\lstCode}[1]{%
+%  \edef\hverb@tmp{#1}%
+%  \expandafter\hl\expandafter{\hverb@tmp}}
+\makeatother
+
+
+
+
+
+
+\begin{document}
+\sffamily
+\allsectionsfont{\normalfont\sffamily\bfseries}
+
+
+\lstdefinestyle{EXPLANATION-STYLE}
+{
+ 	columns=flexible,
+ 	breaklines=true,
+    basicstyle={\normalsize\color{black}\sffamily}
+}
+\lstdefinestyle{TERMINAL}
+{
+ 	columns=fullflexible,
+ 	breaklines=true,
+	backgroundcolor=\color{black!15},
+    basicstyle=\small\color{myTerminalRed}\ttfamily
+}
+\lstdefinestyle{TERMINAL-FLEX}
+{
+ 	columns=flexible,
+ 	breaklines=true,
+	backgroundcolor=\color{black!15},
+    basicstyle=\small\color{myTerminalRed}\ttfamily
+}
+\lstdefinestyle{CODE-STYLE}
+{
+	columns=flexible,
+	breaklines=true,
+	escapechar=@|,
+	backgroundcolor=\color{codelist!50},
+    basicstyle=\small\ttfamily
+}
+
+
+\maketitle
+\hypersetup{linkcolor=blue,urlcolor=blue,anchorcolor=blue}
+\pdfbookmark[section]{Table Of Contents}{1}
+\tableofcontents
+\pagebreak
+
+\section{Config}
+\begin{regular}
+
+To use the batsim framework you must first make a config file.
+You can see how to make this file using basefiles/generate\_config.py
+
+\begin{terminal}
+python3 generate_config.py --help
+\end{terminal}
+
+\begin{terminal}
+Usage:
+    generate_config.py --config-info <type>
+    generate_config.py -i FILE -o PATH [--basefiles PATH] [--output-config] [--increase-heldback-nodes]
+
+Required Options 1:
+    --config-info <type>                Display how the json config is supposed to look like
+                                        as well as how each part of it can look like.
+                                        <type> can be:
+                                                general | sweeps |
+                                                node-sweep | SMTBF-sweep | checkpoint-sweep | checkpointError-sweep | performance-sweep |
+                                                grizzly-workload | synthetic-workload |
+                                                input-options | output
+Required Options 2:
+    -i <FILE> --input <FILE>            Where our config lives
+    -o <PATH> --output <PATH>           Where to start outputing stuff
+                                        
+Options:
+    --basefiles <PATH>                  Where base files go.  Make sure you have a 'workloads' and 'platforms' folder
+                                        in this path.
+                                        [default: ~/basefiles/]
+
+    --output-config                     If this flag is included, will output the input file to --output directory
+                                        as --input filename
+
+    --increase-heldback-nodes           If this flag is included, will treat heldback nodes as additional nodes
+
+\end{terminal}
+
+As you can see you can get --config-info  so type:
+\begin{terminal}
+python3 generate_config.py --config-info general
+\end{terminal}
+\begin{terminal}
+ The general format of a config file:
+    
+    {       <------------------------------------   Opening curly brace to be proper json
+    
+        "Name1":{       <------------------------   The name of an experiment comes first.  You can have multiple experiments
+                                                    in one config file and each will end up in it's own folder under the --output folder.
+                                                    Notice the opening and closing curly brace.  Make sure you put a comma after the closing
+                                                    curly brace if you plan on having another experiment in the same config file
+                
+                "input":{    <-------------------   Always make sure you have an input and an output in your experiment
+                
+                    "node-sweep":{  <------------   It is MOST advisable to always start with a node-sweep.  All other sweeps can come after this one
+                    
+                    },
+                    "synthetic-workload":{ <-----   Always include either a synthetic-workload or a grizzly-workload after your sweeps
+                    
+                    },
+                    "option":value,        <-----   Include any options that will affect all of the jobs on the outside of any sweep or workload
+                
+                },    <--------------------------   Make sure you separate your input options with commas, but also remember to separate input
+                                                    and output with a comma
+                "output":{   <-------------------   Again, always make sure you have an input and output in your experiment
+                
+                    "option":value,   <----------   Output is a bit simpler than input.  Just make sure it is valid json
+                    "option":value
+                
+                }
+        
+        
+        },     <---------------------------------   This closes the experiment and here we have a comma because we included another experiment "Name2"
+        "Name2":{
+            "input":{
+            
+                ...  <--------------------------    Make sure you replace this ellipsis with at least:
+                                                        * a node-sweep
+                                                        * a workload
+            },
+            "output":{
+            
+                ...  <--------------------------    You should replace ellipsis with at least:
+                                                        * "AAE":true | "makespan":true
+                
+            }    <------------------------------    Close output
+        }  <------------------------------------    Close "Name2"          
+    }  <----------------------------------------    Close json
+
+\end{terminal}
+
+
+
+
+\subsection{Run Config}
+You will then want to run the config, for example:
+\begin{terminal}
+python3 generate_config.py -i /ac-project/cwalker/basefiles/$file1 -o /ac-project/cwalker/experiments/$folder1 --basefiles ${basefiles}  --output-config
+
+# Here $file1 is the json config file we already mentioned
+# $folder1 is where you want the output to go for all the simulations corresponding to this config file
+# $basefiles is where all the scripts are located, including generate_config.py
+\end{terminal}
+\section{Run Experiments}
+Next you will want to run the experiments
+\begin{terminal}
+python3 run-experiments.py -i /ac-project/cwalker/experiments/$folder1  --time 1200 --sim-time-minutes 1200 --socket-start 100003
+
+--time is in minutes as well as --sim-time-minutes
+--time is for slurm wall time
+--sim-time-minutes is a setting for batsim for how long the sim should go.  We used to set it to a super high value, I cut back and set it for the walltime in case there was a problem with the simulation so SLURM would be happier.
+
+\end{terminal}
+
+run-experiments.py will:
+\begin{itemize}
+\item sbatch real\_start.py for each simulation, which will:
+\begin{itemize}
+  \item generate a yaml for the simulation with robin
+  \item run the simulation with robin
+  \item when finished the simulation, run post-processing.py
+\end{itemize}
+\end{itemize}
+
+\section{Aggregate Results}
+You will probably want to aggregate all the results into one csv file.
+Use aggregate\_makespan.py for this.  It is our main aggregater, even though it was originally used just for makespan.
+
+You can get its usage using this:
+\begin{terminal}
+python3 aggregate_makespan.py --help
+\end{terminal}
+\begin{terminal}
+Usage:
+    aggregate-makespan.py -i FOLDER [--output FOLDER] [--start-run INT] [--end-run INT]
+
+Required Options:
+    -i FOLDER --input FOLDER    where the experiments are
+
+Options:
+    -o FOLDER --output FOLDER   where the output should go
+                                [default: input]
+    --start-run INT             only include runs starting at start-run
+                             
+    --end-run INT               only include runs ending at and including end-run
+
+\end{terminal}
+I usually run it like this:
+\begin{terminal}
+python3 aggregate_makespan.py -i ~/ac/experiments/$folder1
+
+#where folder1 equals the location set when you ran generate_config.py
+\end{terminal}
+This will output a file total\_makespan.csv as well as raw\_total\_makespan.csv \\
+
+The difference is that raw gathers every makespan.csv file into one file
+
+wheras total\_makespan.csv will average all runs together and output the averages for each experiment.
+If you want to graph variance and such you will need raw \\
+
+In order to graph single job variances you will need to use the out\_jobs.csv file located in each experiment:
+
+\$folder1/name\_of\_experiment/experiment\_\#/Run\_\#/output/expe-out/out\_jobs.csv \\
+
+Typically I will tar.gz \$folder1 and sftp that back to my computer
+
+\section{In Real Life}
+I have things setup on the ac-cluster like so:
+\begin{enumerate}
+  \item Edit an existing config file, and make sure to rename it before saving it
+  \item Set file1=that new config file
+  \item Set folder1=a new folder name for this config's set of simulations
+  \item Set base=\textasciigrave pwd\textasciigrave \hspace{1mm}  as long as I'm in the basefiles folder
+  \item sbatch -p IvyBridge -N1 -n1 -c1 --output=./myBatch.log --export=folder1=\$folder1,file1=\$file1,basefiles=\$base ./myBatch
+\end{enumerate}
+
+That's it.  Here is my myBatch script
+\begin{code}
+#!/bin/bash
+source /ac-project/cwalker/start.sh
+date
+python3 generate_config.py -i /ac-project/cwalker/basefiles/$file1 -o /ac-project/cwalker/experiments/$folder1 --basefiles ${basefiles}  --output-config
+date
+python3 run-experiments.py -i /ac-project/cwalker/experiments/$folder1  --time 1200 --sim-time-minutes 1200 --socket-start 100003
+date
+
+\end{code}
+
+run-experiments will sbatch experiment.sh \\
+Here is experiment.sh
+\begin{code}
+#!/bin/bash
+date
+echo "in experiment.sh"
+hostname
+source /ac-project/cwalker/start2.sh
+echo "after source"
+
+
+echo "real_start.py" && date
+python3 /ac-project/cwalker/basefiles/real_start.py --path $jobPath --socketCount $socketCount --sim-time $mySimTime
+#rm $jobPath/output/expe-out/out*    # do all these rm's to cut down on folder size
+#rm $jobPath/output/expe-out/post_out_jobs.csv
+#rm $jobPath/output/expe-out/raw_post_out_jobs.csv
+#rm -rf $jobPath/output/expe-out/log/
+date
+
+\end{code}
+real\_start.py is there in basefiles to look at, but here is my start2.sh
+\begin{code}
+export MODULEPATH=/opt/ohpc/admin/modulefiles:/opt/ohpc/pub/modulefiles:/ac-project/software/modules/linux-centos7-x86_64/Core/linux-centos7-ivybridge && \
+export PATH=$PATH:/ac-project/cwalker/Install/bin:/ac-project/cwalker/Downloads/goroot/bin/:/ac-project/cwalker/go/bin/
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/ac-project/cwalker/Install/lib:/ac-project/cwalker/Install/lib64
+export LMOD_SH_DBG_ON=1
+source /ac-project/cwalker/new_env/bin/activate
+\end{code}
+
+
+\end{document}
