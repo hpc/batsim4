@@ -101,8 +101,7 @@ void usage_trace_replayer_process(JobPtr job, UsageTraceProfileData * data, cons
     }
 }
 
-int execute_task(std::string type,
-                 BatTask * btask,
+int execute_task(BatTask * btask,
                  BatsimContext *context,
                  const SchedulingAllocation * allocation,
                  double * remaining_time)
@@ -115,12 +114,9 @@ int execute_task(std::string type,
 
     if (profile->is_parallel_task())
     {
-        int return_code;
-        if (type == "parallel")
-            return_code = execute_parallel_task(btask, allocation, remaining_time, context);
-        else if (type == "sequential" )
-            return_code = execute_parallel_task_sequentially(btask,allocation,remaining_time,context);
-            
+        int return_code = execute_parallel_task(btask, allocation, remaining_time,
+                                                         context);
+                    
         if (return_code != 0)
         {
             return return_code;
@@ -146,7 +142,7 @@ int execute_task(std::string type,
                 string task_name = "seq" + job->id.to_string() + "'" + sub_btask->profile->name + "'";
                 XBT_DEBUG("Creating sequential task '%s'", task_name.c_str());
 
-                int ret_last_profile = execute_task(type,sub_btask, context, allocation,
+                int ret_last_profile = execute_task(sub_btask, context, allocation,
                                                     remaining_time);
 
                 // The whole sequence fails if a subtask fails
@@ -247,7 +243,7 @@ int execute_task(std::string type,
             string task_name = "recv" + job->id.to_string() + "'" + job->profile->name + "'";
             XBT_INFO("Creating receive task '%s'", task_name.c_str());
 
-            int ret_last_profile = execute_task(type,sub_btask, context, allocation,
+            int ret_last_profile = execute_task(sub_btask, context, allocation,
                                     remaining_time);
 
             if (ret_last_profile != 0)
@@ -456,8 +452,7 @@ BatTask * initialize_sequential_tasks(JobPtr job, ProfilePtr profile, ProfilePtr
     return task;
 }
 
-void execute_job_process(std::string type,
-                         BatsimContext * context,
+void execute_job_process(BatsimContext * context,
                          SchedulingAllocation * allocation,
                          bool notify_server_at_end,
                          ProfilePtr io_profile)
@@ -519,7 +514,7 @@ void execute_job_process(std::string type,
                                                  context);
 
     // Execute the process
-    job->return_code = execute_task(type, job->task, context, allocation,
+    job->return_code = execute_task(job->task, context, allocation,
                                     &remaining_time);
     if (job->return_code == 0)
     {
