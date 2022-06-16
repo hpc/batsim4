@@ -491,7 +491,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     {
         xbt_assert(json_desc["alloc"].IsString(), "%s: job '%s' has a non-string 'alloc' field",
                     error_prefix.c_str(), j->id.to_string().c_str());
-        myAlloc = json_desc["alloc"].GetString();
+        std::string myAlloc = json_desc["alloc"].GetString();
         j->future_allocation = IntervalSet::from_string_hyphen(myAlloc," ","-");
     }
 
