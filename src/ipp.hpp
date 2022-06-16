@@ -185,7 +185,6 @@ struct SchedulingAllocation
  */
 struct ExecuteJobMessage
 {
-    std::string type; //!< is the job going to be run sequentially or in parallel ("sequential" | "parallel")
     SchedulingAllocation * allocation; //!< The allocation itself
     ProfilePtr io_profile = nullptr; //!< The optional io profile
 };

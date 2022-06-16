@@ -979,7 +979,7 @@ void server_on_execute_job(ServerData * data,
 {
     xbt_assert(task_data->data != nullptr, "inconsistency: task_data has null data");
     auto * message = static_cast<ExecuteJobMessage *>(task_data->data);
-    auto type = message->type;
+    
     auto * allocation = message->allocation;
     auto job = allocation->job;
 
@@ -1094,7 +1094,7 @@ void server_on_execute_job(ServerData * data,
     string pname = "job_" + job->id.to_string();
     auto actor = simgrid::s4u::Actor::create(pname.c_str(),
                                              data->context->machines[allocation->machine_ids.first_element()]->host,
-                                             execute_job_process, type, data->context, allocation, true, message->io_profile);
+                                             execute_job_process, data->context, allocation, true, message->io_profile);
     job->execution_actors.insert(actor);
 }
 

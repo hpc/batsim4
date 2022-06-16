@@ -474,7 +474,13 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     xbt_assert(workload->profiles->exists(profile_name), "%s: the profile %s for job %s does not exist",
                error_prefix.c_str(), profile_name.c_str(), j->id.to_string().c_str());
     j->profile = workload->profiles->at(profile_name);
-
+     //optional field purpose
+    if (json_desc.HasMember("purpose"))
+    {
+        xbt_assert(json_desc["purpose"].IsString(), "%s: job '%s' has a non-string 'purpose' field",
+                    error_prefix.c_str(), j->id.to_string().c_str());
+        j->purpose = json_desc["purpose"].GetString();
+    }
     XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
     
     //CCU-LANL Additions START    till END
@@ -689,6 +695,10 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
             
             
         }
+        if (!json_desc_copy.HasMember("purpose"))
+            {
+                json_desc_copy.AddMember("purpose",Value().SetString(j->purpose.c_str(),json_desc_copy.GetAllocator()),json_desc_copy.GetAllocator()); //add purpose 
+            }
     }
     // Let's get the JSON string which originally described the job
     // (to conserve potential fields unused by Batsim)
