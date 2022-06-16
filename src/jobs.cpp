@@ -487,6 +487,14 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                     error_prefix.c_str(),j->id.to_string().c_str());
         j->start = json_desc["start"].GetDouble();
     }
+    if (json_desc.HasMember("alloc"))
+    {
+        xbt_assert(json_desc["alloc"].IsString(), "%s: job '%s' has a non-string 'alloc' field",
+                    error_prefix.c_str(), j->id.to_string().c_str());
+        myAlloc = json_desc["alloc"].GetString();
+        j->future_allocation = IntervalSet::from_string_hyphen(myAlloc," ","-");
+    }
+
     XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
     
     //CCU-LANL Additions START    till END
@@ -709,6 +717,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
             {
                 json_desc_copy.AddMember("start",Value().SetDouble(j->start),json_desc_copy.GetAllocator());
             }
+        
     }
     // Let's get the JSON string which originally described the job
     // (to conserve potential fields unused by Batsim)
