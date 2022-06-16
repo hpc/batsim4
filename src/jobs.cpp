@@ -481,6 +481,12 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                     error_prefix.c_str(), j->id.to_string().c_str());
         j->purpose = json_desc["purpose"].GetString();
     }
+    if (json_desc.HasMember("start"))
+    {
+        xbt_assert(json_desc["start"].IsNumber(), "%s: job '%s' has non-number field",
+                    error_prefix.c_str(),j->id.to_string().c_str());
+        j->start = json_desc["start"].GetDouble();
+    }
     XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
     
     //CCU-LANL Additions START    till END
@@ -698,6 +704,10 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         if (!json_desc_copy.HasMember("purpose"))
             {
                 json_desc_copy.AddMember("purpose",Value().SetString(j->purpose.c_str(),json_desc_copy.GetAllocator()),json_desc_copy.GetAllocator()); //add purpose 
+            }
+        if (!json_desc_copy.HasMember("start"))
+            {
+                json_desc_copy.AddMember("start",Value().SetDouble(j->start),json_desc_copy.GetAllocator());
             }
     }
     // Let's get the JSON string which originally described the job

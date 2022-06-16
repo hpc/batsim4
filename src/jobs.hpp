@@ -250,6 +250,7 @@ struct Job
                             //   it is necessary for making sure we keep this value when calculating batsim_meta in export.cpp
     int cores = 1; //the amount of cores this job uses
     std::string purpose = "job"; //the purpose ("job" || "reservation")
+    double start = -1.0;
 public:
     /**
      * @brief Computes the task progression of this job
