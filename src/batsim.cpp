@@ -213,6 +213,11 @@ Output options:
                                      simulation output [default: out].
   --disable-schedule-tracing         Disables the Pajé schedule outputting.
   --disable-machine-state-tracing    Disables the machine state outputting.
+  --output-svg <string>              Output svg files of the schedule.  Only used for algorithms
+                                     that use Schedule class options: (none || all || short)
+                                     all: every change to the schedule is made into an svg
+                                     short: every loop through make_decisions is made into an svg
+                                     [default: none]
 
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
@@ -317,6 +322,19 @@ Checkpointing Options:
                                      [default: false]
   --compute_checkpointing_error <e>  Allows for an error 'e' (double) to computed checkpoints
                                      [default: 1.0]
+
+Reservation Options:
+  --reschedule-policy <string>       What the policy for adding a reservation is.
+                                     When the reservation affects already scheduled jobs should it
+                                     reschedule (RESCHEDULE_AFFECTED || RESCHEDULE_ALL) jobs
+                                     [default: RESCHEDULE_AFFECTED]
+
+  --impact-policy <string>           What the policy for impacting running/scheduled jobs when
+                                     a reservation does not include a set allocation
+                                     (LEAST_KILLING_LARGEST_FIRST || LEAST_KILLING_SMALLEST_FIRST
+                                      || LEAST_RESCHEDULING (TODO))
+                                     [default: LEAST_KILLING_LARGEST_FIRST]
+
   -h, --help                         Shows this help.
 )";
     //CCU-LANL Additions Above ^^ batsched-cfg, Failure Options, Checkpointing Options,Performance Options
@@ -344,6 +362,9 @@ Checkpointing Options:
    main_args.share_packing = args["--share-packing"].asBool();
    main_args.share_packing_holdback = args["--share-packing-holdback"].asLong();
    main_args.shuffle_jobs = args["--shuffle-jobs"].asBool();
+   main_args.reschedule_policy = args["--reschedule-policy"].asString();
+   main_args.output_svg = args["--output-svg"].asString();
+   main_args.impact_policy = args["--impact-policy"].asString();
    
     
     if (args["--simgrid-version"].asBool())
@@ -1083,6 +1104,9 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("share-packing", Value().SetBool(main_args.share_packing),alloc);
     context->config_json.AddMember("share-packing-holdback",Value().SetInt((int)main_args.share_packing_holdback),alloc);
     context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
+    context->config_json.AddMember("reschedule-policy",Value().SetString(main_args.reservation_policy.c_str(),alloc),alloc);
+    context->config_json.AddMember("output-svg",Value().SetString(main_args.output_svg.c_str(),alloc),alloc);
+    context->config_json.AddMember("impact-policy",Value().SetString(main_args.impact_policy.c_str(),alloc),alloc);
 
 
     // others

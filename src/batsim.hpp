@@ -129,7 +129,11 @@ struct MainArguments
     bool share_packing = false; //!< Whether to pack single resource jobs onto one node until core_percent*cores are taken up
     double core_percent = 1.0;   //!< percent of the cores to use on shared machines
     long share_packing_holdback = 0;
-    bool shuffle_jobs = false;
+    bool shuffle_jobs = false; //TODO
+    std::string reschedule_policy = "RESCHEDULE_AFFECTED";
+    std::string impact_policy = "LEAST_KILLING_LARGEST_FIRST"; // kill largest jobs first, if needed, when reserving arbitrary nodes
+    std::string output_svg = "none";
+
 };
 
 /**

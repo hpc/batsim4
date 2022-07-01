@@ -436,6 +436,17 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     xbt_assert(json_desc["subtime"].IsNumber(), "%s: job '%s' has a non-number 'subtime' field",
                error_prefix.c_str(), j->id.to_string().c_str());
     j->submission_time = static_cast<long double>(json_desc["subtime"].GetDouble());
+    if (json_desc.HasMember("submission_times"))
+    { 
+        const Value & submission_times = json_desc["submission_times"];
+        xbt_assert(submission_times.IsArray(), "%s: the 'submission_times' member is not an array", error_prefix.c_str());
+        for (auto time : submission_times.GetArray())
+        {
+            j->submission_times.push_back(time.GetDouble());
+        }
+    }
+    else
+        j->submission_times.push_back(j->submission_time);
 
     // Get walltime (optional)
     if (!json_desc.HasMember("walltime"))
@@ -494,6 +505,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         std::string myAlloc = json_desc["alloc"].GetString();
         j->future_allocation = IntervalSet::from_string_hyphen(myAlloc," ","-");
     }
+    
 
     XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
     

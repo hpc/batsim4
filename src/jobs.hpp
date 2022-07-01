@@ -252,6 +252,7 @@ struct Job
     std::string purpose = "job"; //the purpose ("job" || "reservation")
     double start = -1.0; //when a job will start (reservation)
     IntervalSet future_allocation; //!< The future allocation of a job (reservation)
+    std::vector<double> submission_times;
 public:
     /**
      * @brief Computes the task progression of this job
