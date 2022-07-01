@@ -440,7 +440,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     { 
         const Value & submission_times = json_desc["submission_times"];
         xbt_assert(submission_times.IsArray(), "%s: the 'submission_times' member is not an array", error_prefix.c_str());
-        for (auto time : submission_times.GetArray())
+        for (const auto & time : submission_times.GetArray())
         {
             j->submission_times.push_back(time.GetDouble());
         }
