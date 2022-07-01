@@ -1104,7 +1104,7 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("share-packing", Value().SetBool(main_args.share_packing),alloc);
     context->config_json.AddMember("share-packing-holdback",Value().SetInt((int)main_args.share_packing_holdback),alloc);
     context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
-    context->config_json.AddMember("reschedule-policy",Value().SetString(main_args.reservation_policy.c_str(),alloc),alloc);
+    context->config_json.AddMember("reschedule-policy",Value().SetString(main_args.reschedule_policy.c_str(),alloc),alloc);
     context->config_json.AddMember("output-svg",Value().SetString(main_args.output_svg.c_str(),alloc),alloc);
     context->config_json.AddMember("impact-policy",Value().SetString(main_args.impact_policy.c_str(),alloc),alloc);
 
