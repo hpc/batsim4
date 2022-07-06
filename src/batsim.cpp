@@ -329,12 +329,6 @@ Reservation Options:
                                      reschedule (RESCHEDULE_AFFECTED || RESCHEDULE_ALL) jobs
                                      [default: RESCHEDULE_AFFECTED]
 
-  --impact-policy <string>           What the policy for impacting running/scheduled jobs when
-                                     a reservation does not include a set allocation
-                                     (LEAST_KILLING_LARGEST_FIRST || LEAST_KILLING_SMALLEST_FIRST
-                                     || LEAST_RESCHEDULING (TODO))
-                                     [default: LEAST_KILLING_LARGEST_FIRST]
-
   -h, --help                         Shows this help.
 )";
     //CCU-LANL Additions Above ^^ batsched-cfg, Failure Options, Checkpointing Options,Performance Options
@@ -364,7 +358,7 @@ Reservation Options:
    main_args.shuffle_jobs = args["--shuffle-jobs"].asBool();
    main_args.reschedule_policy = args["--reschedule-policy"].asString();
    main_args.output_svg = args["--output-svg"].asString();
-   main_args.impact_policy = args["--impact-policy"].asString();
+  // main_args.impact_policy = args["--impact-policy"].asString();
    for(auto const& arg : args) {
         std::cout << arg.first <<  arg.second << std::endl;
     }
