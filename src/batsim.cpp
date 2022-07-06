@@ -364,9 +364,7 @@ Reservation Options:
    main_args.reschedule_policy = args["--reschedule-policy"].asString();
    main_args.output_svg = args["--output-svg"].asString();
    main_args.impact_policy = args["--impact-policy"].asString();
-   for(auto const& arg : args) {
-        std::cout << arg.first <<  arg.second << std::endl;
-    }
+   
    
     
     if (args["--simgrid-version"].asBool())
