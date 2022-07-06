@@ -516,7 +516,6 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     //since we need to add to the json description and it is a const, this is needed
     rapidjson::Document json_desc_copy;
     json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
-    profile_doc.AddMember("original_delay",Value().SetDouble(data->real_delay),profile_doc.GetAllocator());
     rapidjson::Document sub_times;
     sub_times.SetArray();
 
@@ -527,7 +526,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         sub_times.PushBack(value, allocator);
         // Or as one liner:
         // document.PushBack(r
-    json_desc_copy.AddMember("submission_times",Value().SetArray(sub_times),json_description_copy.GetAllocator());
+    json_desc_copy.AddMember("submission_times",sub_times,json_desc_copy.GetAllocator());
 
     /*  *************************************************************************************
         *                                                                                   *
