@@ -446,7 +446,10 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         }
     }
     else
+    {
+        XBT_INFO("DEBUG pushing back submission_time line 450 jobs.cpp");
         j->submission_times.push_back(j->submission_time);
+    }
 
     // Get walltime (optional)
     if (!json_desc.HasMember("walltime"))
@@ -513,6 +516,18 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     //since we need to add to the json description and it is a const, this is needed
     rapidjson::Document json_desc_copy;
     json_desc_copy.CopyFrom(json_desc,json_desc_copy.GetAllocator());
+    profile_doc.AddMember("original_delay",Value().SetDouble(data->real_delay),profile_doc.GetAllocator());
+    rapidjson::Document sub_times;
+    sub_times.SetArray();
+
+    rapidjson::Document::AllocatorType& allocator = sub_times.GetAllocator();
+    for (const auto time : j->submission_times) {
+        rapidjson::Value value;
+        value.SetDouble(time, allocator);
+        sub_times.PushBack(value, allocator);
+        // Or as one liner:
+        // document.PushBack(r
+    json_desc_copy.AddMember("submission_times",Value().SetArray(sub_times),json_description_copy.GetAllocator());
 
     /*  *************************************************************************************
         *                                                                                   *
