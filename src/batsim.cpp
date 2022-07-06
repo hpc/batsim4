@@ -365,6 +365,7 @@ Reservation Options:
    main_args.reschedule_policy = args["--reschedule-policy"].asString();
    main_args.output_svg = args["--output-svg"].asString();
    main_args.impact_policy = args["--impact-policy"].asString();
+   XBT_ERROR("%s",args.to_string().c_str());
    
     
     if (args["--simgrid-version"].asBool())
