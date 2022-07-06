@@ -522,7 +522,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     rapidjson::Document::AllocatorType& allocator = sub_times.GetAllocator();
     for (const auto time : j->submission_times) {
         rapidjson::Value value;
-        value.SetDouble(timer);
+        value.SetDouble(time);
         sub_times.PushBack(value, allocator);
     }
     json_desc_copy.AddMember("submission_times",sub_times,json_desc_copy.GetAllocator());
