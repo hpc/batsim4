@@ -332,7 +332,7 @@ Reservation Options:
   --impact-policy <string>           What the policy for impacting running/scheduled jobs when
                                      a reservation does not include a set allocation
                                      (LEAST_KILLING_LARGEST_FIRST || LEAST_KILLING_SMALLEST_FIRST
-                                      || LEAST_RESCHEDULING (TODO))
+                                     || LEAST_RESCHEDULING (TODO))
                                      [default: LEAST_KILLING_LARGEST_FIRST]
 
   -h, --help                         Shows this help.
