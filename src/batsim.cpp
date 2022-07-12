@@ -734,6 +734,7 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
                                                              context->machines[0]->speed
                                                             );
 
+        
         int nb_machines_in_workload = -1;
         workload->load_from_json(desc.filename, nb_machines_in_workload);
         max_nb_machines_in_workloads = std::max(max_nb_machines_in_workloads, nb_machines_in_workload);
@@ -1091,6 +1092,7 @@ void set_configuration(BatsimContext *context,
     //CCU-LANL Additions
     context->config_json.AddMember("checkpointing_on", Value().SetBool(main_args.checkpointing_on),alloc);
     context->config_json.AddMember("compute_checkpointing",Value().SetBool(main_args.compute_checkpointing),alloc);
+    context->config_json.AddMember("checkpointing_interval",Value().SetDouble(main_args.global_checkpointing_interval),alloc);
     context->config_json.AddMember("MTBF",Value().SetDouble(main_args.MTBF),alloc);
     context->config_json.AddMember("SMTBF",Value().SetDouble(main_args.SMTBF),alloc);
     context->config_json.AddMember("seed-failures",Value().SetBool(main_args.seed_failures),alloc);

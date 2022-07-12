@@ -404,6 +404,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     j->runtime = -1;
     j->state = JobState::JOB_STATE_NOT_SUBMITTED;
     j->consumed_energy = -1;
+    
 
     xbt_assert(json_desc.IsObject(), "%s: one job is not an object", error_prefix.c_str());
 
@@ -558,8 +559,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         if (workload->_checkpointing_on)
         {
             //if the workload has these attributes then set them
-            if(json_desc.HasMember("checkpoint"))
-                j->checkpoint_interval = json_desc["checkpoint"].GetDouble();
+            if(json_desc.HasMember("checkpoint_interval"))
+                j->checkpoint_interval = json_desc["checkpoint_interval"].GetDouble();
             if(json_desc.HasMember("dumptime"))
                 j->dump_time = json_desc["dumptime"].GetDouble();
             if(json_desc.HasMember("readtime"))
@@ -614,10 +615,10 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 j->profile->data = data;
                 XBT_INFO("Total delay %f",delay);
             //The job object now has the correct values, but its json description does not.  Set these values
-            if (json_desc_copy.HasMember("checkpoint"))
-                json_desc_copy["checkpoint"].SetDouble(j->checkpoint_interval);
+            if (json_desc_copy.HasMember("checkpoint_interval"))
+                json_desc_copy["checkpoint_interval"].SetDouble(j->checkpoint_interval);
             else  
-                json_desc_copy.AddMember("checkpoint",Value().SetDouble(j->checkpoint_interval),json_desc_copy.GetAllocator());
+                json_desc_copy.AddMember("checkpoint_interval",Value().SetDouble(j->checkpoint_interval),json_desc_copy.GetAllocator());
             }
             if (json_desc_copy.HasMember("dumptime"))
                 json_desc_copy["dumptime"].SetDouble(j->dump_time);
@@ -665,8 +666,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         if (workload->_checkpointing_on)
         {
             //if the workload has these attributes then set them
-            if(json_desc.HasMember("checkpoint"))
-                j->checkpoint_interval = json_desc["checkpoint"].GetDouble();
+            if(json_desc.HasMember("checkpoint_interval"))
+                j->checkpoint_interval = json_desc["checkpoint_interval"].GetDouble();
             if(json_desc.HasMember("dumptime"))
                 j->dump_time = json_desc["dumptime"].GetDouble();
             if(json_desc.HasMember("readtime"))
@@ -699,8 +700,9 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 }
                 if (workload->_global_checkpointing_interval != -1.0){
                     j->checkpoint_interval = (workload->_global_checkpointing_interval)-j->dump_time;
+                    XBT_INFO("global job %s  checkpoint_interval:%f",j->id.job_name().c_str(),j->checkpoint_interval);
                 }
-
+                    XBT_INFO("job %s  checkpoint_interval:%f",j->id.job_name().c_str(),j->checkpoint_interval);
                 //get the job's profile data
                 ParallelHomogeneousProfileData * data =static_cast<ParallelHomogeneousProfileData *>(j->profile->data);
                 //delay will be changing since we are checkpointing
@@ -722,10 +724,10 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 j->profile->data = data;
                 XBT_INFO("Total delay %f, Total cpu %f",delay,delay * one_second);
             //The job object now has the correct values, but its json description does not.  Set these values
-            if (json_desc_copy.HasMember("checkpoint"))
-                json_desc_copy["checkpoint"].SetDouble(j->checkpoint_interval);
+            if (json_desc_copy.HasMember("checkpoint_interval"))
+                json_desc_copy["checkpoint_interval"].SetDouble(j->checkpoint_interval);
             else  
-                json_desc_copy.AddMember("checkpoint",Value().SetDouble(j->checkpoint_interval),json_desc_copy.GetAllocator());
+                json_desc_copy.AddMember("checkpoint_interval",Value().SetDouble(j->checkpoint_interval),json_desc_copy.GetAllocator());
             }
             if (json_desc_copy.HasMember("dumptime"))
                 json_desc_copy["dumptime"].SetDouble(j->dump_time);
