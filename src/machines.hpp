@@ -83,7 +83,8 @@ struct Machine
 
     //CCU-LANL Additions
     double speed; //!< Speed of the host
-    int core_count = -1; 
+    int core_count = -1;
+    double repair_time = -1;
 
     /**
      * @brief Returns whether the Machine has the given role
