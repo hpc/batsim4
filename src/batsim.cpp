@@ -175,7 +175,8 @@ Input options:
   -p, --platform <platform_file>     The SimGrid platform to simulate.
   -w, --workload <workload_file>     The workload JSON files to simulate.
   -W, --workflow <workflow_file>     The workflow XML files to simulate.
-  -r, --repair <repair_file>         The repair time for individual machines
+  --repair <repair_file>             The repair time for individual machines JSON file.
+                                     [default: none]
   --WS, --workflow-start (<cut_workflow_file> <start_time>)  The workflow XML
                                      files to simulate, with the time at which
                                      they should be started.
@@ -303,8 +304,8 @@ Failure Options:
                                      [default: false]
 Schedule Options:
   --queue-depth <int>               The amount of items in the queue that will be scheduled at a time
-                                    A lower amount will improve performance of the scheduler and thus the simulation
-                                    '-1' refers to all items will be scheduled, zero will be discarded
+                                    A lower amount will improve performance of the scheduler and thus the simulation 
+                                    (-1) refers to all items will be scheduled, zero will be discarded
                                     Only used on algorithms that use the Queue class (and only conservative_bf atm)
                                     [default: -1]
 
@@ -372,8 +373,12 @@ Reservation Options:
    main_args.reschedule_policy = args["--reschedule-policy"].asString();
    main_args.output_svg = args["--output-svg"].asString();
    main_args.impact_policy = args["--impact-policy"].asString();
+   
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
+   
+  
+  
 
 
 
@@ -506,7 +511,7 @@ Reservation Options:
             }
         }
     }
-
+ 
     // EventLists
     vector<string> events_files = args["--events"].asStringList();
     for (size_t i = 0; i < events_files.size(); i++)
@@ -538,7 +543,7 @@ Reservation Options:
     main_args.hosts_roles_map[main_args.master_host_name] = "master";
 
     main_args.energy_used = args["--energy"].asBool();
-
+  
 
     // get roles mapping
     vector<string> hosts_roles_maps = args["--add-role-to-hosts"].asStringList();
@@ -559,6 +564,7 @@ Reservation Options:
             main_args.hosts_roles_map[host] = roles;
         }
     }
+  
 
     main_args.socket_endpoint = args["--socket-endpoint"].asString();
     main_args.redis_enabled = args["--enable-redis"].asBool();
@@ -587,7 +593,7 @@ Reservation Options:
     main_args.dynamic_registration_enabled = args["--enable-dynamic-jobs"].asBool();
     main_args.ack_dynamic_registration = args["--acknowledge-dynamic-jobs"].asBool();
     main_args.profile_reuse_enabled = args["--enable-profile-reuse"].asBool();
-
+    
     if (main_args.profile_reuse_enabled && !main_args.dynamic_registration_enabled)
     {
         XBT_ERROR("Profile reuse is enabled but dynamic registration is not, have you missed something?");
@@ -679,6 +685,7 @@ Reservation Options:
    
     
     run_simulation = !error;
+  
 }
 
 void configure_batsim_logging_output(const MainArguments & main_args)
@@ -1076,6 +1083,7 @@ void set_configuration(BatsimContext *context,
 
     context->platform_filename = main_args.platform_filename;
     context->repair_time_file = main_args.repair_time_file;
+    context->repair_time = main_args.repair_time;
     context->export_prefix = main_args.export_prefix;
     context->workflow_nb_concurrent_jobs_limit = main_args.workflow_nb_concurrent_jobs_limit;
     context->energy_used = main_args.energy_used;

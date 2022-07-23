@@ -85,6 +85,7 @@ struct BatsimContext
     std::string batsim_version;                     //!< The Batsim version (got from the BATSIM_VERSION variable that is usually set by the build system)
     std::string batsched_config="";
     std::string repair_time_file="";
+    double repair_time = -1.0;
 
     ~BatsimContext();
 };

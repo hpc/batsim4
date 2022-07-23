@@ -216,6 +216,7 @@ Value JsonProtocolWriter::machine_to_json_value(const Machine & machine)
     machine_doc.AddMember("state", Value().SetString(machine_state_to_string(machine.state).c_str(), _alloc), _alloc);
     machine_doc.AddMember("core_count",Value().SetInt(machine.core_count), _alloc);
     machine_doc.AddMember("speed", Value().SetDouble(machine.speed), _alloc);
+    machine_doc.AddMember("repair-time",Value().SetDouble(machine.repair_time),_alloc);
 
     Value properties(rapidjson::kObjectType);
     for(auto const &entry : machine.properties)

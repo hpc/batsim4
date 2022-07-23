@@ -75,14 +75,17 @@ void Machines::create_machines(const BatsimContext *context,
                     std::istreambuf_iterator<char>());
 
         // JSON document creation
-        Document doc;
+        rapidjson::Document doc;
         doc.Parse(content.c_str());
         XBT_INFO("read in file %s for repair times file successfully",context->repair_time_file.c_str());
         xbt_assert(doc.HasMember("repair-times"), "Invalid repair times file %s.  No repair-times member",context->repair_time_file.c_str());
-        const Value& repair_times = document["repair-times"];
+      
+        const rapidjson::Value & repair_times = doc["repair-times"];
+      
         xbt_assert(repair_times.IsArray(),"Invalid repair-times member in repair times file. Not an array");
         int count = 1;
-        for (const Value& aObject : repair_times.GetArray()) // Uses SizeType instead of size_t
+       
+        for (const rapidjson::Value& aObject : repair_times.GetArray()) // Uses SizeType instead of size_t
         {            
             xbt_assert(aObject.HasMember("machine"),"Array of repair-times invalid. No machine member in item number %d",count);
             xbt_assert(aObject.HasMember("repair-time"),"Array of repair-times invalid.  No repair-time member in item number %d",count);
@@ -106,8 +109,11 @@ void Machines::create_machines(const BatsimContext *context,
         machine->jobs_being_computed = {};
         //CCU-LANL Additions
         machine->speed = (host->get_speed());
+        
         if (!repair_times_map.empty() && repair_times_map.find(machine->name)!=repair_times_map.end())
             machine->repair_time = repair_times_map[machine->name];
+        else
+            machine->repair_time = context->repair_time;
 
         machine->properties = *(host->get_properties());
 
