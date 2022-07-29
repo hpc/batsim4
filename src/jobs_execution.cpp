@@ -10,6 +10,7 @@
 #include "jobs.hpp"
 #include "task_execution.hpp"
 #include "server.hpp"
+#include "batsim_tools.hpp"
 
 #include <simgrid/s4u.hpp>
 #include <simgrid/plugins/energy.h>
@@ -642,17 +643,18 @@ bool cancel_ptask(BatTask * btask)
 
 
 void killer_process(BatsimContext * context,
-                    std::vector<JobIdentifier> jobs_ids,
+                    std::vector<batsim_tools::Kill_Message *> jobs_msgs,
                     JobState killed_job_state,
                     bool acknowledge_kill_on_protocol)
 {
     KillingDoneMessage * message = new KillingDoneMessage;
-    message->jobs_ids = jobs_ids;
+    //message->jobs_ids = jobs_ids;
     message->acknowledge_kill_on_protocol = acknowledge_kill_on_protocol;
 
-    for (const JobIdentifier & job_id : jobs_ids)
+    for (batsim_tools::Kill_Message * job_msg : jobs_msgs)
     {
-        auto job = context->workloads.job_at(job_id);
+        
+        auto job = context->workloads.job_at(job_msg->id);
 
         xbt_assert(! (job->state == JobState::JOB_STATE_REJECTED ||
                       job->state == JobState::JOB_STATE_SUBMITTED ||
@@ -675,7 +677,8 @@ void killer_process(BatsimContext * context,
             }
 
             // Store job progress in the message
-            message->jobs_progress[job_id] = job_progress;
+            job_msg->progress = job_progress;
+            //message->jobs_progress[job_id] = job_progress;
 
             // Try to cancel parallel task Executors, if any
             bool cancelled_ptask = cancel_ptask(job->task);
@@ -724,6 +727,7 @@ void killer_process(BatsimContext * context,
             // The job process will regularly terminate with the status JOB_STATE_COMPLETED_KILLED
         }
     }
+    message->jobs_msgs = jobs_msgs;
 
     send_message("server", IPMessageType::KILLING_DONE, static_cast<void*>(message));
 }

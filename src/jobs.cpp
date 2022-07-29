@@ -526,7 +526,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         value.SetDouble(time);
         sub_times.PushBack(value, allocator);
     }
-    json_desc_copy.AddMember("submission_times",sub_times,json_desc_copy.GetAllocator());
+    if (!(json_desc_copy.HasMember("submission_times")))
+        json_desc_copy.AddMember("submission_times",sub_times,json_desc_copy.GetAllocator());
 
     /*  *************************************************************************************
         *                                                                                   *

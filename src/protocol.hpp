@@ -127,8 +127,7 @@ public:
      * @param[in] date The event date. Must be greater than or equal to the previous event.
      * @param[in] job_progress Contains the progress of each job that has really been killed.
      */
-    virtual void append_job_killed(const std::vector<std::string> & job_ids,
-                                   const std::map<std::string, BatTask *> & job_progress,
+    virtual void append_job_killed(const std::vector<std::string> &job_ids_str,const std::vector<batsim_tools::Kill_Message *> &jobs_msgs,
                                    double date) = 0;
 
     /**
@@ -303,8 +302,7 @@ public:
      * @param[in] date The event date. Must be greater than or equal to the previous event.
      * @param[in] job_progress Contains the progress of each job that has really been killed.
      */
-    void append_job_killed(const std::vector<std::string> & job_ids,
-                           const std::map<std::string, BatTask *> & job_progress,
+    void append_job_killed(const std::vector<std::string>& job_ids_str,const std::vector<batsim_tools::Kill_Message *> & jobs_msgs,
                            double date);
 
     /**

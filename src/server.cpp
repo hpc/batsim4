@@ -649,20 +649,19 @@ void server_on_killing_done(ServerData * data,
     xbt_assert(task_data->data != nullptr, "inconsistency: task_data has null data");
     auto * message = static_cast<KillingDoneMessage *>(task_data->data);
 
-    map<string, BatTask *> jobs_progress_str;
     vector<string> really_killed_job_ids_str;
     vector<string> job_ids_str;
-    job_ids_str.reserve(message->jobs_ids.size());
+    job_ids_str.reserve(message->jobs_msgs.size());
 
     // manage job Id list
-    for (const JobIdentifier & job_id : message->jobs_ids)
+    for (batsim_tools::Kill_Message * job_msg : message->jobs_msgs)
     {
-        job_ids_str.push_back(job_id.to_string());
+        job_ids_str.push_back(job_msg->id.to_string());
 
         // store job progress from BatTask tree in str
-        jobs_progress_str[job_id.to_string()] = message->jobs_progress[job_id];
+        //jobs_progress_str[job_id.to_string()] = message->jobs_progress[job_id];
 
-        const auto job = data->context->workloads.job_at(job_id);
+        const auto job = data->context->workloads.job_at(job_msg->id);
         if ( job->state == JobState::JOB_STATE_COMPLETED_KILLED)
         {
             data->nb_running_jobs--;
@@ -673,7 +672,7 @@ void server_on_killing_done(ServerData * data,
 
             xbt_assert(data->nb_completed_jobs + data->nb_running_jobs <= data->nb_submitted_jobs , "inconsistency: nb_completed_jobs + nb_running_jobs > nb_submitted_jobs");
 
-            really_killed_job_ids_str.push_back(job_id.to_string());
+            really_killed_job_ids_str.push_back(job_msg->id.to_string());
 
             // also add a job complete message for the jobs that have really been
             // killed
@@ -706,7 +705,7 @@ void server_on_killing_done(ServerData * data,
                  boost::algorithm::join(job_ids_str, ",").c_str(),
                  boost::algorithm::join(really_killed_job_ids_str, ",").c_str());
 
-        data->context->proto_writer->append_job_killed(job_ids_str, jobs_progress_str, simgrid::s4u::Engine::get_clock());
+        data->context->proto_writer->append_job_killed(job_ids_str, message->jobs_msgs, simgrid::s4u::Engine::get_clock());
     }
 
     --data->nb_killers;
@@ -923,14 +922,15 @@ void server_on_kill_jobs(ServerData * data,
     xbt_assert(task_data->data != nullptr, "inconsistency: task_data has null data");
     auto * message = static_cast<KillJobMessage *>(task_data->data);
 
-    std::vector<JobIdentifier> jobs_ids_to_kill;
+    std::vector<batsim_tools::Kill_Message *> jobs_msgs_to_kill;
 
-    for (const JobIdentifier & job_id : message->jobs_ids)
+    for (batsim_tools::Kill_Message *  job_msg : message->jobs_msgs)
     {
-        xbt_assert(data->context->workloads.job_is_registered(job_id),
-                   "Trying to kill job '%s' but it does not exist.", job_id.to_cstring());
+        
+        xbt_assert(data->context->workloads.job_is_registered(job_msg->id),
+                   "Trying to kill job '%s' but it does not exist.", job_msg->id.to_cstring());
 
-        auto job = data->context->workloads.job_at(job_id);
+        auto job = data->context->workloads.job_at(job_msg->id);
 
         // Let's discard jobs whose kill has already been requested
         if (!job->kill_requested)
@@ -938,20 +938,20 @@ void server_on_kill_jobs(ServerData * data,
             // Let's check the job state
             xbt_assert(job->state == JobState::JOB_STATE_RUNNING || job->is_complete(),
                        "Invalid KILL_JOB: job_id '%s' refers to a job not being executed nor completed.",
-                       job_id.to_cstring());
+                       job_msg->id.to_cstring());
 
             // Let's mark that the job kill has been requested
             job->kill_requested = true;
 
             // The job is included in the killer_process arguments
-            jobs_ids_to_kill.push_back(job_id);
+            jobs_msgs_to_kill.push_back(job_msg);
         }
     }
 
-    if (jobs_ids_to_kill.size() > 0)
+    if (jobs_msgs_to_kill.size() > 0)
     {
         simgrid::s4u::Actor::create("killer_process", simgrid::s4u::this_actor::get_host(),
-                                    killer_process, data->context, jobs_ids_to_kill,
+                                    killer_process, data->context, jobs_msgs_to_kill,
                                     JobState::JOB_STATE_COMPLETED_KILLED, true);
         ++data->nb_killers;
     }
