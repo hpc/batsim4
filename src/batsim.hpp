@@ -135,6 +135,7 @@ struct MainArguments
     std::string output_svg = "none";
     std::string repair_time_file = "none";
     int scheduler_queue_depth = -1;
+    bool subtract_progress_from_walltime = false;
 
 };
 

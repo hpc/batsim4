@@ -325,6 +325,11 @@ Performance Options:
 Checkpointing Options:
   --checkpointing-on                 Enables checkpointing.
                                      [default: false]
+  --subtract-progress-from-walltime  When checkpointing will subtract the progress made from the walltime
+                                     In a way, this will penalize jobs for a failure by giving it less time when resubmitted
+                                     But in another way it will help the job schedule faster by being able to backfill into
+                                     places it normally wouldn't be able to
+                                     [default: false]
   --checkpointing-interval <intrvl>  set the system wide checkpointing interval, float or integer
                                      [default: -1.0]
   --compute_checkpointing            Computes optimal checkpointing time for each job
@@ -373,6 +378,7 @@ Reservation Options:
    main_args.reschedule_policy = args["--reschedule-policy"].asString();
    main_args.output_svg = args["--output-svg"].asString();
    main_args.impact_policy = args["--impact-policy"].asString();
+   main_args.subtract_progress_from_walltime = args["--subtract-progress-from-walltime"].asBool();
    
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
@@ -1134,6 +1140,7 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("impact-policy",Value().SetString(main_args.impact_policy.c_str(),alloc),alloc);
     context->config_json.AddMember("repair-time-file",Value().SetString(main_args.repair_time_file.c_str(),alloc),alloc);
     context->config_json.AddMember("scheduler-queue-depth",Value().SetInt((int)main_args.scheduler_queue_depth),alloc);
+    context->config_json.AddMember("subtract-progress-from-walltime",Value().SetBool(main_args.subtract_progress_from_walltime),alloc);
 
 
 
