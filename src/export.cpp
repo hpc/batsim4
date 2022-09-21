@@ -991,6 +991,7 @@ void JobsTracer::initialize(BatsimContext *context,
         "turnaround_time",
         "stretch",
         "allocated_resources",
+        "purpose", //*
         "checkpoint_interval", //*
         "dump_time",//*
         "read_time",//*
@@ -1287,6 +1288,7 @@ void JobsTracer::write_job(const JobPtr job)
     _job_map["consumed_energy"] = rejected ? "" : to_string(job->consumed_energy);
     _job_map["allocated_resources"] = job->allocation.to_string_hyphen(" ");
     //CCU-LANL Additions
+    _job_map["purpose"] = job->purpose;
     _job_map["checkpoint_interval"] = to_string(static_cast<double>(job->checkpoint_interval));
     _job_map["dump_time"] = to_string(static_cast<double>(job->dump_time));
     _job_map["read_time"] = to_string(static_cast<double>(job->read_time));
