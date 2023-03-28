@@ -220,6 +220,17 @@ Output options:
                                      all: every change to the schedule is made into an svg
                                      short: every loop through make_decisions is made into an svg
                                      [default: none]
+  --svg-frame-start <INT>            What frame number to start outputing svgs
+                                     [default: 1]
+  --svg-frame-end <INT>              What frame number to end outputing svgs
+                                     '-1' is to the end.
+                                     [default: -1]
+  --svg-output-start <INT>           What output number to start outputing svgs
+                                     [default: 1]
+  --svg-output-end <INT>             What output number to end outputing svgs
+                                     [default: -1]
+
+
 
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
@@ -379,6 +390,10 @@ Reservation Options:
    main_args.output_svg = args["--output-svg"].asString();
    main_args.impact_policy = args["--impact-policy"].asString();
    main_args.subtract_progress_from_walltime = args["--subtract-progress-from-walltime"].asBool();
+   main_args.svg_frame_start = args["--svg-frame-start"].asLong();
+   main_args.svg_frame_end = args["--svg-frame-end"].asLong();
+   main_args.svg_output_start = args["--svg-output-start"].asLong();
+   main_args.svg_output_end = args["--svg-output-end"].asLong();
    
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
@@ -1141,6 +1156,10 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("repair-time-file",Value().SetString(main_args.repair_time_file.c_str(),alloc),alloc);
     context->config_json.AddMember("scheduler-queue-depth",Value().SetInt((int)main_args.scheduler_queue_depth),alloc);
     context->config_json.AddMember("subtract-progress-from-walltime",Value().SetBool(main_args.subtract_progress_from_walltime),alloc);
+    context->config_json.AddMember("svg-frame-start",Value().SetInt(main_args.svg_frame_start),alloc);
+    context->config_json.AddMember("svg-frame-end",Value().SetInt(main_args.svg_frame_end),alloc);
+    context->config_json.AddMember("svg-output-start",Value().SetInt(main_args.svg_output_start),alloc);
+    context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
 
 
 

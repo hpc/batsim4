@@ -8,6 +8,7 @@
 #include <string>
 #include <set>
 #include <memory>
+#include <ctime>
 
 #include <boost/algorithm/string.hpp>
 #include <rapidjson/document.h>
@@ -265,7 +266,10 @@ void server_on_job_completed(ServerData * data,
     //CCU-LANL Additions
     //This is not an error but will display in the log as an error.  If the verbosity is quiet
     //this will still show up, which is why it is set as XBT_ERROR.
-    XBT_ERROR("%d jobs ACTUALLY completed so far",(data->nb_completed_jobs - data->nb_killed_jobs ));
+    time_t now = time(0);
+    char* dt = ctime(&now);
+    XBT_ERROR("%d jobs ACTUALLY completed so far. real_time: %s, queue_size: %d",(data->nb_completed_jobs - data->nb_killed_jobs ),dt,data->context->queue_size);
+   
 
     data->context->proto_writer->append_job_completed(message->job->id.to_string(),
                                                       job_state_to_string(job->state),

@@ -1418,6 +1418,15 @@ void JsonProtocolReader::handle_notify(int event_number,
     {
         send_message_at_time(timestamp, "server", IPMessageType::CONTINUE_DYNAMIC_REGISTER);
     }
+    else if (notify_type == "queue_size")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = queue_size)");
+      const Value & queue_size_value = data_object["data"];
+      xbt_assert(queue_size_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = queue_size is not a string");
+      std::string queue_size = queue_size_value.GetString();
+
+      context->queue_size = std::stoi(queue_size);
+    }
     else
     {
         xbt_assert(false, "Unknown NOTIFY type received ('%s').", notify_type.c_str());
