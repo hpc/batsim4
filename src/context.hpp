@@ -87,6 +87,7 @@ struct BatsimContext
     std::string repair_time_file="";
     double repair_time = -1.0;
     int queue_size = -1;
+    int schedule_size = -1;
 
     ~BatsimContext();
 };

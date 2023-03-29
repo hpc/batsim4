@@ -268,7 +268,7 @@ void server_on_job_completed(ServerData * data,
     //this will still show up, which is why it is set as XBT_ERROR.
     time_t now = time(0);
     char* dt = ctime(&now);
-    XBT_ERROR("%d jobs ACTUALLY completed so far. real_time: %s, queue_size: %d",(data->nb_completed_jobs - data->nb_killed_jobs ),dt,data->context->queue_size);
+    XBT_ERROR("%d jobs ACTUALLY completed so far. real_time: %s, queue_size: %d, schedule_size %d",(data->nb_completed_jobs - data->nb_killed_jobs ),dt,data->context->queue_size,data->context->schedule_size);
    
 
     data->context->proto_writer->append_job_completed(message->job->id.to_string(),

@@ -1427,6 +1427,15 @@ void JsonProtocolReader::handle_notify(int event_number,
 
       context->queue_size = std::stoi(queue_size);
     }
+    else if (notify_type == "schedule_size")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = schedule_size)");
+      const Value & schedule_size_value = data_object["data"];
+      xbt_assert(schedule_size_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = schedule_size is not a string");
+      std::string schedule_size = schedule_size_value.GetString();
+
+      context->schedule_size = std::stoi(schedule_size);
+    }
     else
     {
         xbt_assert(false, "Unknown NOTIFY type received ('%s').", notify_type.c_str());
