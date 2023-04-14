@@ -1436,6 +1436,33 @@ void JsonProtocolReader::handle_notify(int event_number,
 
       context->schedule_size = std::stoi(schedule_size);
     }
+    else if (notify_type == "number_running_jobs")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = number_running_jobs)");
+      const Value & number_running_jobs_value = data_object["data"];
+      xbt_assert(number_running_jobs_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = number_running_jobs is not a string");
+      std::string number_running_jobs = number_running_jobs_value.GetString();
+
+      context->nb_running_jobs = std::stoi(number_running_jobs);
+    }
+    else if (notify_type == "utilization")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = utilization)");
+      const Value & utilization_value = data_object["data"];
+      xbt_assert(utilization_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = utilization is not a string");
+      std::string utilization = utilization_value.GetString();
+
+      context->utilization = std::stod(utilization);
+    }
+    else if (notify_type == "utilization_no_resv")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = utilization_no_resv)");
+      const Value & utilization_no_resv_value = data_object["data"];
+      xbt_assert(utilization_no_resv_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = utilization_no_resv is not a string");
+      std::string utilization_no_resv = utilization_no_resv_value.GetString();
+
+      context->utilization_no_resv = std::stod(utilization_no_resv);
+    }
     else
     {
         xbt_assert(false, "Unknown NOTIFY type received ('%s').", notify_type.c_str());

@@ -9,6 +9,8 @@
 #include <set>
 #include <memory>
 #include <ctime>
+#include <fstream>
+#include <iomanip>
 
 #include <boost/algorithm/string.hpp>
 #include <rapidjson/document.h>
@@ -267,9 +269,21 @@ void server_on_job_completed(ServerData * data,
     //This is not an error but will display in the log as an error.  If the verbosity is quiet
     //this will still show up, which is why it is set as XBT_ERROR.
     time_t now = time(0);
-    char* dt = ctime(&now);
-    XBT_ERROR("%d jobs ACTUALLY completed so far. real_time: %s, queue_size: %d, schedule_size %d",(data->nb_completed_jobs - data->nb_killed_jobs ),dt,data->context->queue_size,data->context->schedule_size);
-   
+    std::string real_time(ctime(&now));
+    real_time = real_time.substr( 0, real_time.length() -1  );
+
+    XBT_ERROR("%d jobs ACTUALLY completed so far. real_time: %s, queue_size: %d, schedule_size: %d",(data->nb_completed_jobs - data->nb_killed_jobs ),real_time.c_str(),data->context->queue_size,data->context->schedule_size);
+    if (data->context->output_extra_info)
+    {
+        std::ofstream f(data->context->export_prefix+"_extra_info.csv",std::ios_base::app);
+        if (f.is_open())
+        {
+            f<<std::fixed<<std::setprecision(10)<<double(simgrid::s4u::Engine::get_clock())<<","<<(data->nb_completed_jobs - data->nb_killed_jobs)<<","<<real_time<<","
+                <<data->context->queue_size<<","<<data->context->schedule_size<<","
+                << data->context->nb_running_jobs << ","<< data->context->utilization<<","<<data->context->utilization_no_resv<<std::endl;
+            f.close();
+        }
+    }
 
     data->context->proto_writer->append_job_completed(message->job->id.to_string(),
                                                       job_state_to_string(job->state),

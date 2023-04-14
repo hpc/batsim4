@@ -229,6 +229,13 @@ Output options:
                                      [default: 1]
   --svg-output-end <INT>             What output number to end outputing svgs
                                      [default: -1]
+  --turn-off-extra-info              Normally extra info: 
+                                     '
+                                     simulation time, jobs actually completed,real time,
+                                     number of jobs running, utilization, utilization with no reservations'
+                                     '
+                                     is written out to '<output_prefix>_extra_info.csv'
+                                     This flag will turn it off.
 
 
 
@@ -397,6 +404,8 @@ Reservation Options:
    
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
+   main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
+   
    
   
   
@@ -607,6 +616,18 @@ Reservation Options:
     main_args.export_prefix = args["--export"].asString();
     main_args.enable_schedule_tracing = !args["--disable-schedule-tracing"].asBool();
     main_args.enable_machine_state_tracing = !args["--disable-machine-state-tracing"].asBool();
+    //CCU-LANL ADDITION
+    if (main_args.output_extra_info)
+    {
+        std::ofstream f(main_args.export_prefix+"_extra_info.csv",std::ios_base::out);
+        if (f.is_open())
+        {
+            f<<"sim_time,actually_completed_jobs,real_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv"<<std::endl;
+            f.close();
+        }
+    }
+
+
 
     // Job-related options
     // *******************
@@ -967,7 +988,10 @@ int main(int argc, char * argv[])
     // Let's create the BatsimContext, which stores information about the current instance
     BatsimContext context;
     set_configuration(&context, main_args);
+    //CCU-LANL ADDITION
+    context.output_extra_info = main_args.output_extra_info;
 
+    
     context.batsim_version = STR(BATSIM_VERSION);
     XBT_INFO("Batsim version: %s", context.batsim_version.c_str());
     //CCU-LANL Additions
