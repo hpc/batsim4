@@ -7,6 +7,7 @@
 
 #include "ipp.hpp"
 #include "context.hpp"
+#include "batsim_tools.hpp"
 
 #include <xbt/replay.hpp>
 
@@ -24,7 +25,7 @@ void usage_trace_replayer(simgrid::xbt::ReplayAction & action);
  * @param[in] acknowledge_kill_on_protocol Whether to acknwoledge the kill to the decision process through the protocol
  */
 void killer_process(BatsimContext *context,
-                    std::vector<JobIdentifier> jobs_ids,
+                    std::vector<batsim_tools::Kill_Message *> jobs_msgs,
                     JobState killed_job_state = JobState::JOB_STATE_COMPLETED_KILLED,
                     bool acknowledge_kill_on_protocol = true);
 

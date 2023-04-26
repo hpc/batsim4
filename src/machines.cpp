@@ -11,6 +11,11 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <fstream>
+#include <streambuf>
+
+#include <rapidjson/document.h>
+
 #include <simgrid/host.h>
 #include <simgrid/plugins/energy.h>
 
@@ -55,6 +60,42 @@ void Machines::create_machines(const BatsimContext *context,
     xbt_assert(limit_machine_count == -1 || limit_machine_count > 0,
                "Bad call to Machines::create_machines(): limit_machine_count (%d) not -1 nor strictly positive",
                limit_machine_count);
+    std::map<std::string,double> repair_times_map;
+    if(context->repair_time_file != "none")
+    {
+        ifstream ifile(context->repair_time_file);
+        xbt_assert(ifile.is_open(), "Cannot read file '%s'", context->repair_time_file.c_str());
+        string content;
+
+        ifile.seekg(0, ios::end);
+        content.reserve(static_cast<unsigned long>(ifile.tellg()));
+        ifile.seekg(0, ios::beg);
+
+        content.assign((std::istreambuf_iterator<char>(ifile)),
+                    std::istreambuf_iterator<char>());
+
+        // JSON document creation
+        rapidjson::Document doc;
+        doc.Parse(content.c_str());
+        XBT_INFO("read in file %s for repair times file successfully",context->repair_time_file.c_str());
+        xbt_assert(doc.HasMember("repair-times"), "Invalid repair times file %s.  No repair-times member",context->repair_time_file.c_str());
+      
+        const rapidjson::Value & repair_times = doc["repair-times"];
+      
+        xbt_assert(repair_times.IsArray(),"Invalid repair-times member in repair times file. Not an array");
+        int count = 1;
+       
+        for (const rapidjson::Value& aObject : repair_times.GetArray()) // Uses SizeType instead of size_t
+        {            
+            xbt_assert(aObject.HasMember("machine"),"Array of repair-times invalid. No machine member in item number %d",count);
+            xbt_assert(aObject.HasMember("repair-time"),"Array of repair-times invalid.  No repair-time member in item number %d",count);
+            repair_times_map[aObject["machine"].GetString()] = aObject["repair-time"].GetDouble();
+            count++;
+        }
+        XBT_INFO("read in all items of repair times file successfully");
+
+    }
+
 
     std::vector<simgrid::s4u::Host *> hosts = simgrid::s4u::Engine::get_instance()->get_all_hosts();
 
@@ -68,6 +109,11 @@ void Machines::create_machines(const BatsimContext *context,
         machine->jobs_being_computed = {};
         //CCU-LANL Additions
         machine->speed = (host->get_speed());
+        
+        if (!repair_times_map.empty() && repair_times_map.find(machine->name)!=repair_times_map.end())
+            machine->repair_time = repair_times_map[machine->name];
+        else
+            machine->repair_time = context->repair_time;
 
         machine->properties = *(host->get_properties());
 

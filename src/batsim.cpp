@@ -175,6 +175,8 @@ Input options:
   -p, --platform <platform_file>     The SimGrid platform to simulate.
   -w, --workload <workload_file>     The workload JSON files to simulate.
   -W, --workflow <workflow_file>     The workflow XML files to simulate.
+  --repair <repair_file>             The repair time for individual machines JSON file.
+                                     [default: none]
   --WS, --workflow-start (<cut_workflow_file> <start_time>)  The workflow XML
                                      files to simulate, with the time at which
                                      they should be started.
@@ -213,6 +215,29 @@ Output options:
                                      simulation output [default: out].
   --disable-schedule-tracing         Disables the Pajé schedule outputting.
   --disable-machine-state-tracing    Disables the machine state outputting.
+  --output-svg <string>              Output svg files of the schedule.  Only used for algorithms
+                                     that use Schedule class options: (none || all || short)
+                                     all: every change to the schedule is made into an svg
+                                     short: every loop through make_decisions is made into an svg
+                                     [default: none]
+  --svg-frame-start <INT>            What frame number to start outputing svgs
+                                     [default: 1]
+  --svg-frame-end <INT>              What frame number to end outputing svgs
+                                     '-1' is to the end.
+                                     [default: -1]
+  --svg-output-start <INT>           What output number to start outputing svgs
+                                     [default: 1]
+  --svg-output-end <INT>             What output number to end outputing svgs
+                                     [default: -1]
+  --turn-off-extra-info              Normally extra info: 
+                                     '
+                                     simulation time, jobs actually completed,real time,
+                                     number of jobs running, utilization, utilization with no reservations'
+                                     '
+                                     is written out to '<output_prefix>_extra_info.csv'
+                                     This flag will turn it off.
+
+
 
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
@@ -275,6 +300,11 @@ Other options:
   --log-b-log                        If set, turns the additional b_log (batsched_log) logs on.
                                      Currently FAILURES are the only option
                                      [default: false]
+Workload Options:
+  --shuffle-jobs                     Meant to be used when all jobs arrive at time zero,
+                                     This will randomly shuffle the jobs.  Will require
+                                     multiple runs and averages (Monte Carlo)
+                                     [default: false]
 Failure Options:
   --MTBF <time-in-seconds>           The Mean Time Between Failure in seconds
                                      [default: -1.0]
@@ -290,6 +320,13 @@ Failure Options:
                                      [default: 0.0]
   --log-failures                     When set, puts failures and their type in a log file
                                      [default: false]
+Schedule Options:
+  --queue-depth <int>               The amount of items in the queue that will be scheduled at a time
+                                    A lower amount will improve performance of the scheduler and thus the simulation 
+                                    (-1) refers to all items will be scheduled, zero will be discarded
+                                    Only used on algorithms that use the Queue class (and only conservative_bf atm)
+                                    [default: -1]
+
 Performance Options:
   --performance-factor <percentage decimal>   If set this will increase/decrease the real_duration
                                               of each job by this factor 
@@ -299,9 +336,17 @@ Performance Options:
                                      [default: false]
   --core-percent <float>             sets the limit on how many cores from a node can be used
                                      [default: 1.0]
+  --share-packing-holdback <int>     if set, will holdback a certain number of nodes for
+                                     exclusive share-packing
+                                     [default: 0]
 
 Checkpointing Options:
   --checkpointing-on                 Enables checkpointing.
+                                     [default: false]
+  --subtract-progress-from-walltime  When checkpointing will subtract the progress made from the walltime
+                                     In a way, this will penalize jobs for a failure by giving it less time when resubmitted
+                                     But in another way it will help the job schedule faster by being able to backfill into
+                                     places it normally wouldn't be able to
                                      [default: false]
   --checkpointing-interval <intrvl>  set the system wide checkpointing interval, float or integer
                                      [default: -1.0]
@@ -309,6 +354,18 @@ Checkpointing Options:
                                      [default: false]
   --compute_checkpointing_error <e>  Allows for an error 'e' (double) to computed checkpoints
                                      [default: 1.0]
+
+Reservation Options:
+  --reschedule-policy <string>       What the policy for adding a reservation is.
+                                     When the reservation affects already scheduled jobs should it
+                                     reschedule (RESCHEDULE_AFFECTED || RESCHEDULE_ALL) jobs
+                                     [default: RESCHEDULE_AFFECTED]
+  --impact-policy <string>           What the policy for impacting running/scheduled jobs when
+                                     a reservation does not include a set allocation
+                                     (LEAST_KILLING_LARGEST_FIRST || LEAST_KILLING_SMALLEST_FIRST
+                                     || LEAST_RESCHEDULING ( TODO ))
+                                     [default: LEAST_KILLING_LARGEST_FIRST]
+
   -h, --help                         Shows this help.
 )";
     //CCU-LANL Additions Above ^^ batsched-cfg, Failure Options, Checkpointing Options,Performance Options
@@ -334,6 +391,29 @@ Checkpointing Options:
    main_args.log_b_log = args["--log-b-log"].asBool();
    main_args.core_percent = (double) std::atof(args["--core-percent"].asString().c_str());
    main_args.share_packing = args["--share-packing"].asBool();
+   main_args.share_packing_holdback = args["--share-packing-holdback"].asLong();
+   main_args.shuffle_jobs = args["--shuffle-jobs"].asBool();
+   main_args.reschedule_policy = args["--reschedule-policy"].asString();
+   main_args.output_svg = args["--output-svg"].asString();
+   main_args.impact_policy = args["--impact-policy"].asString();
+   main_args.subtract_progress_from_walltime = args["--subtract-progress-from-walltime"].asBool();
+   main_args.svg_frame_start = args["--svg-frame-start"].asLong();
+   main_args.svg_frame_end = args["--svg-frame-end"].asLong();
+   main_args.svg_output_start = args["--svg-output-start"].asLong();
+   main_args.svg_output_end = args["--svg-output-end"].asLong();
+   
+   main_args.repair_time_file = args["--repair"].asString();
+   main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
+   main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
+   
+   
+  
+  
+
+
+
+
+   
    
     
     if (args["--simgrid-version"].asBool())
@@ -461,7 +541,7 @@ Checkpointing Options:
             }
         }
     }
-
+ 
     // EventLists
     vector<string> events_files = args["--events"].asStringList();
     for (size_t i = 0; i < events_files.size(); i++)
@@ -493,7 +573,7 @@ Checkpointing Options:
     main_args.hosts_roles_map[main_args.master_host_name] = "master";
 
     main_args.energy_used = args["--energy"].asBool();
-
+  
 
     // get roles mapping
     vector<string> hosts_roles_maps = args["--add-role-to-hosts"].asStringList();
@@ -514,6 +594,7 @@ Checkpointing Options:
             main_args.hosts_roles_map[host] = roles;
         }
     }
+  
 
     main_args.socket_endpoint = args["--socket-endpoint"].asString();
     main_args.redis_enabled = args["--enable-redis"].asBool();
@@ -535,6 +616,18 @@ Checkpointing Options:
     main_args.export_prefix = args["--export"].asString();
     main_args.enable_schedule_tracing = !args["--disable-schedule-tracing"].asBool();
     main_args.enable_machine_state_tracing = !args["--disable-machine-state-tracing"].asBool();
+    //CCU-LANL ADDITION
+    if (main_args.output_extra_info)
+    {
+        std::ofstream f(main_args.export_prefix+"_extra_info.csv",std::ios_base::out);
+        if (f.is_open())
+        {
+            f<<"sim_time,actually_completed_jobs,real_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv"<<std::endl;
+            f.close();
+        }
+    }
+
+
 
     // Job-related options
     // *******************
@@ -542,7 +635,7 @@ Checkpointing Options:
     main_args.dynamic_registration_enabled = args["--enable-dynamic-jobs"].asBool();
     main_args.ack_dynamic_registration = args["--acknowledge-dynamic-jobs"].asBool();
     main_args.profile_reuse_enabled = args["--enable-profile-reuse"].asBool();
-
+    
     if (main_args.profile_reuse_enabled && !main_args.dynamic_registration_enabled)
     {
         XBT_ERROR("Profile reuse is enabled but dynamic registration is not, have you missed something?");
@@ -634,6 +727,7 @@ Checkpointing Options:
    
     
     run_simulation = !error;
+  
 }
 
 void configure_batsim_logging_output(const MainArguments & main_args)
@@ -703,6 +797,7 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
                                                              context->machines[0]->speed
                                                             );
 
+        
         int nb_machines_in_workload = -1;
         workload->load_from_json(desc.filename, nb_machines_in_workload);
         max_nb_machines_in_workloads = std::max(max_nb_machines_in_workloads, nb_machines_in_workload);
@@ -893,7 +988,10 @@ int main(int argc, char * argv[])
     // Let's create the BatsimContext, which stores information about the current instance
     BatsimContext context;
     set_configuration(&context, main_args);
+    //CCU-LANL ADDITION
+    context.output_extra_info = main_args.output_extra_info;
 
+    
     context.batsim_version = STR(BATSIM_VERSION);
     XBT_INFO("Batsim version: %s", context.batsim_version.c_str());
     //CCU-LANL Additions
@@ -1029,6 +1127,8 @@ void set_configuration(BatsimContext *context,
     }
 
     context->platform_filename = main_args.platform_filename;
+    context->repair_time_file = main_args.repair_time_file;
+    context->repair_time = main_args.repair_time;
     context->export_prefix = main_args.export_prefix;
     context->workflow_nb_concurrent_jobs_limit = main_args.workflow_nb_concurrent_jobs_limit;
     context->energy_used = main_args.energy_used;
@@ -1060,6 +1160,7 @@ void set_configuration(BatsimContext *context,
     //CCU-LANL Additions
     context->config_json.AddMember("checkpointing_on", Value().SetBool(main_args.checkpointing_on),alloc);
     context->config_json.AddMember("compute_checkpointing",Value().SetBool(main_args.compute_checkpointing),alloc);
+    context->config_json.AddMember("checkpointing_interval",Value().SetDouble(main_args.global_checkpointing_interval),alloc);
     context->config_json.AddMember("MTBF",Value().SetDouble(main_args.MTBF),alloc);
     context->config_json.AddMember("SMTBF",Value().SetDouble(main_args.SMTBF),alloc);
     context->config_json.AddMember("seed-failures",Value().SetBool(main_args.seed_failures),alloc);
@@ -1071,7 +1172,19 @@ void set_configuration(BatsimContext *context,
 
     context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
     context->config_json.AddMember("share-packing", Value().SetBool(main_args.share_packing),alloc);
+    context->config_json.AddMember("share-packing-holdback",Value().SetInt((int)main_args.share_packing_holdback),alloc);
     context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
+    context->config_json.AddMember("reschedule-policy",Value().SetString(main_args.reschedule_policy.c_str(),alloc),alloc);
+    context->config_json.AddMember("output-svg",Value().SetString(main_args.output_svg.c_str(),alloc),alloc);
+    context->config_json.AddMember("impact-policy",Value().SetString(main_args.impact_policy.c_str(),alloc),alloc);
+    context->config_json.AddMember("repair-time-file",Value().SetString(main_args.repair_time_file.c_str(),alloc),alloc);
+    context->config_json.AddMember("scheduler-queue-depth",Value().SetInt((int)main_args.scheduler_queue_depth),alloc);
+    context->config_json.AddMember("subtract-progress-from-walltime",Value().SetBool(main_args.subtract_progress_from_walltime),alloc);
+    context->config_json.AddMember("svg-frame-start",Value().SetInt(main_args.svg_frame_start),alloc);
+    context->config_json.AddMember("svg-frame-end",Value().SetInt(main_args.svg_frame_end),alloc);
+    context->config_json.AddMember("svg-output-start",Value().SetInt(main_args.svg_output_start),alloc);
+    context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
+
 
 
     // others

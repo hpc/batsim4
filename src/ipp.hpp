@@ -18,6 +18,7 @@
 #include "pointers.hpp"
 #include "jobs.hpp"
 #include "events.hpp"
+#include "batsim_tools.hpp"
 
 struct BatsimContext;
 struct ServerData;
@@ -195,7 +196,7 @@ struct ExecuteJobMessage
  */
 struct KillJobMessage
 {
-    std::vector<JobIdentifier> jobs_ids; //!< The ids of the jobs to kill
+    std::vector<batsim_tools::Kill_Message *> jobs_msgs; //!< The ids of the jobs to kill
 };
 
 /**
@@ -253,8 +254,8 @@ struct SwitchMessage
  */
 struct KillingDoneMessage
 {
-    std::vector<JobIdentifier> jobs_ids; //!< The IDs of the jobs whose kill has been requested
-    std::map<JobIdentifier, BatTask *> jobs_progress; //!< Stores the progress of the jobs that have really been killed.
+    std::vector<batsim_tools::Kill_Message *> jobs_msgs; //!< The IDs of the jobs whose kill has been requested
+    //!< Stores the progress of the jobs that have really been killed.
     bool acknowledge_kill_on_protocol; //!< Whether to send a JOB_KILLED event to acknowledge the kills
 };
 

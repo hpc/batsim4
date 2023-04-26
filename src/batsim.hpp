@@ -127,7 +127,20 @@ struct MainArguments
     double fixed_failures = -1.0; //!< a global time for fixed failures to happen.  Does exactly what SMTBF does except not random times and not based on some distribution. Mostly for debugging.
     bool log_b_log = false; // !< whether to log failures at expe-out/log/failures.log
     bool share_packing = false; //!< Whether to pack single resource jobs onto one node until core_percent*cores are taken up
-    double core_percent = 1.0;                              //!< percent of the cores to use on shared machines
+    double core_percent = 1.0;   //!< percent of the cores to use on shared machines
+    long share_packing_holdback = 0;
+    bool shuffle_jobs = false; //TODO
+    std::string reschedule_policy = "RESCHEDULE_AFFECTED";
+    std::string impact_policy = "LEAST_KILLING_LARGEST_FIRST"; // kill largest jobs first, if needed, when reserving arbitrary nodes
+    std::string output_svg = "none";
+    bool output_extra_info = true;
+    long svg_frame_start = 1;
+    long svg_frame_end = -1;
+    long svg_output_start = 1;
+    long svg_output_end = -1;
+    std::string repair_time_file = "none";
+    int scheduler_queue_depth = -1;
+    bool subtract_progress_from_walltime = false;
 
 };
 

@@ -248,7 +248,11 @@ struct Job
     double error_MTBF = -1.0; //!< error added to optimal checkpoint interval (for testing) -- was added so it could be written out to out_jobs.csv
     double progress = -1.0; //!< progress of job calculated using compute_job_progress()   -- this is computed when a job is killed in jobs_execution.cpp
                             //   it is necessary for making sure we keep this value when calculating batsim_meta in export.cpp
-
+    int cores = 1; //the amount of cores this job uses
+    std::string purpose = "job"; //the purpose ("job" || "reservation")
+    double start = -1.0; //when a job will start (reservation)
+    IntervalSet future_allocation; //!< The future allocation of a job (reservation)
+    std::vector<double> submission_times;
 public:
     /**
      * @brief Computes the task progression of this job

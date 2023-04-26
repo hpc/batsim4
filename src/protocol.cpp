@@ -216,6 +216,7 @@ Value JsonProtocolWriter::machine_to_json_value(const Machine & machine)
     machine_doc.AddMember("state", Value().SetString(machine_state_to_string(machine.state).c_str(), _alloc), _alloc);
     machine_doc.AddMember("core_count",Value().SetInt(machine.core_count), _alloc);
     machine_doc.AddMember("speed", Value().SetDouble(machine.speed), _alloc);
+    machine_doc.AddMember("repair-time",Value().SetDouble(machine.repair_time),_alloc);
 
     Value properties(rapidjson::kObjectType);
     for(auto const &entry : machine.properties)
@@ -399,8 +400,7 @@ Value generate_task_tree(BatTask* task_tree, rapidjson::Document::AllocatorType 
     return task;
 }
 
-void JsonProtocolWriter::append_job_killed(const vector<string> & job_ids,
-                                           const std::map<string, BatTask *> & job_progress,
+void JsonProtocolWriter::append_job_killed(const std::vector<std::string>& job_ids_str, const vector<batsim_tools::Kill_Message *> & job_msgs,
                                            double date)
 {
     /*
@@ -445,6 +445,26 @@ void JsonProtocolWriter::append_job_killed(const vector<string> & job_ids,
     }
     */
 
+   /*  CCU/LANL EDIT
+    {
+      "timestamp": 10.0,
+      "type": "JOB_KILLED",
+      "data": {
+        "job_ids": ["w0!1", "w0!2"],
+        "job_msgs": [{"id":"w0!1","forWhat":3,"job_progress":"w0!1": {"profile": "my_simple_profile", "progress": 0.52}},
+                     {"id":"w0!2","forWhat":2,"job_progress":{
+                                                              "profile": "my_sequential_profile",
+                                                              "current_task_index": 3,
+                                                              "current_task":{
+                                                                 "profile": "my_simple_profile",
+                                                                   "progress": 0.52 }
+                      }
+                    ]
+      }
+    }
+   */
+
+
     xbt_assert(date >= _last_date, "Date inconsistency");
     _last_date = date;
     _is_empty = false;
@@ -454,23 +474,29 @@ void JsonProtocolWriter::append_job_killed(const vector<string> & job_ids,
     event.AddMember("type", Value().SetString("JOB_KILLED"), _alloc);
 
     Value jobs(rapidjson::kArrayType);
-    jobs.Reserve(static_cast<unsigned int>(job_ids.size()), _alloc);
+    Value job_msgs_json(rapidjson::kArrayType);
+    job_msgs_json.Reserve(static_cast<unsigned int>(job_msgs.size()), _alloc);
+    jobs.Reserve(static_cast<unsigned int>(job_msgs.size()), _alloc);
 
-    Value progress(rapidjson::kObjectType);
-
-    for (const string& job_id : job_ids)
+    
+    for (const batsim_tools::Kill_Message * msg : job_msgs)
     {
-        jobs.PushBack(Value().SetString(job_id.c_str(), _alloc), _alloc);
-        // compute task progress tree
-        if (job_progress.at(job_id) != nullptr) {
-            progress.AddMember(Value().SetString(job_id.c_str(), _alloc),
-                generate_task_tree(job_progress.at(job_id), _alloc), _alloc);
+        Value job_msg(rapidjson::kObjectType);
+        job_msg.AddMember("id",Value().SetString(msg->simple_id.c_str(),_alloc),_alloc);
+        job_msg.AddMember("forWhat",Value().SetInt(static_cast<int>(msg->forWhat)),_alloc);
+        
+        if (msg->progress != nullptr) {
+            job_msg.AddMember("job_progress",generate_task_tree(msg->progress, _alloc), _alloc);
         }
+        job_msgs_json.PushBack(job_msg,_alloc);
+        jobs.PushBack(Value().SetString(msg->simple_id.c_str(), _alloc), _alloc);
+        // compute task progress tree
+        
     }
 
     Value data(rapidjson::kObjectType);
     data.AddMember("job_ids", jobs, _alloc);
-    data.AddMember("job_progress", progress, _alloc);
+    data.AddMember("job_msgs",job_msgs_json,_alloc);
     event.AddMember("data", data, _alloc);
 
     _events.PushBack(event, _alloc);
@@ -972,7 +998,7 @@ void JsonProtocolReader::handle_execute_job(int event_number,
     xbt_assert(data_object.IsObject(), "Invalid JSON message: the 'data' value of event %d (EXECUTE_JOB) should be an object", event_number);
     xbt_assert(data_object.MemberCount() == 2 || data_object.MemberCount() == 3, "Invalid JSON message: the 'data' value of event %d (EXECUTE_JOB) should be of size in {2,3} (size=%d)", event_number, data_object.MemberCount());
 
-    
+
     // ******************
     // Get Job identifier
     // ******************
@@ -1392,6 +1418,51 @@ void JsonProtocolReader::handle_notify(int event_number,
     {
         send_message_at_time(timestamp, "server", IPMessageType::CONTINUE_DYNAMIC_REGISTER);
     }
+    else if (notify_type == "queue_size")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = queue_size)");
+      const Value & queue_size_value = data_object["data"];
+      xbt_assert(queue_size_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = queue_size is not a string");
+      std::string queue_size = queue_size_value.GetString();
+
+      context->queue_size = std::stoi(queue_size);
+    }
+    else if (notify_type == "schedule_size")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = schedule_size)");
+      const Value & schedule_size_value = data_object["data"];
+      xbt_assert(schedule_size_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = schedule_size is not a string");
+      std::string schedule_size = schedule_size_value.GetString();
+
+      context->schedule_size = std::stoi(schedule_size);
+    }
+    else if (notify_type == "number_running_jobs")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = number_running_jobs)");
+      const Value & number_running_jobs_value = data_object["data"];
+      xbt_assert(number_running_jobs_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = number_running_jobs is not a string");
+      std::string number_running_jobs = number_running_jobs_value.GetString();
+
+      context->nb_running_jobs = std::stoi(number_running_jobs);
+    }
+    else if (notify_type == "utilization")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = utilization)");
+      const Value & utilization_value = data_object["data"];
+      xbt_assert(utilization_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = utilization is not a string");
+      std::string utilization = utilization_value.GetString();
+
+      context->utilization = std::stod(utilization);
+    }
+    else if (notify_type == "utilization_no_resv")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = utilization_no_resv)");
+      const Value & utilization_no_resv_value = data_object["data"];
+      xbt_assert(utilization_no_resv_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = utilization_no_resv is not a string");
+      std::string utilization_no_resv = utilization_no_resv_value.GetString();
+
+      context->utilization_no_resv = std::stod(utilization_no_resv);
+    }
     else
     {
         xbt_assert(false, "Unknown NOTIFY type received ('%s').", notify_type.c_str());
@@ -1627,7 +1698,7 @@ void JsonProtocolReader::handle_kill_job(int event_number,
     /* {
       "timestamp": 10.0,
       "type": "KILL_JOB",
-      "data": {"job_ids": ["w0!1", "w0!2"]}
+      "data": {"job_msgs": [{"id":"w0!1","forWhat":1},{"id":"w0!2","forWhat":3}]}
     } */
 
     auto * message = new KillJobMessage;
@@ -1635,16 +1706,22 @@ void JsonProtocolReader::handle_kill_job(int event_number,
     xbt_assert(data_object.IsObject(), "Invalid JSON message: the 'data' value of event %d (KILL_JOB) should be an object", event_number);
     xbt_assert(data_object.MemberCount() == 1, "Invalid JSON message: the 'data' value of event %d (KILL_JOB) should be of size 1 (size=%d)", event_number, data_object.MemberCount());
 
-    xbt_assert(data_object.HasMember("job_ids"), "Invalid JSON message: the 'data' value of event %d (KILL_JOB) should contain a 'job_ids' key.", event_number);
-    const Value & job_ids_array = data_object["job_ids"];
-    xbt_assert(job_ids_array.IsArray(), "Invalid JSON message: the 'job_ids' value in the 'data' value of event %d (KILL_JOB) should be an array.", event_number);
-    xbt_assert(job_ids_array.Size() > 0, "Invalid JSON message: the 'job_ids' array in the 'data' value of event %d (KILL_JOB) should be non-empty.", event_number);
-    message->jobs_ids.resize(job_ids_array.Size());
+    xbt_assert(data_object.HasMember("job_msgs"), "Invalid JSON message: the 'data' value of event %d (KILL_JOB) should contain a 'job_msgs' key.", event_number);
+    const Value & job_msgs_array = data_object["job_msgs"];
+    xbt_assert(job_msgs_array.IsArray(), "Invalid JSON message: the 'job_msgs' value in the 'data' value of event %d (KILL_JOB) should be an array.", event_number);
+    xbt_assert(job_msgs_array.Size() > 0, "Invalid JSON message: the 'job_msgs' array in the 'data' value of event %d (KILL_JOB) should be non-empty.", event_number);
+    message->jobs_msgs.resize(job_msgs_array.Size());
 
-    for (unsigned int i = 0; i < job_ids_array.Size(); ++i)
+    for (unsigned int i = 0; i < job_msgs_array.Size(); ++i)
     {
-        const Value & job_id_value = job_ids_array[i];
-        message->jobs_ids[i] = JobIdentifier(job_id_value.GetString());
+        const Value & job_msg = job_msgs_array[i];
+        xbt_assert(job_msg.HasMember("id"),"Invalid Kill Message, Kill Message with no 'id' field of event %d (KILL_JOB)",event_number);
+        xbt_assert(job_msg.HasMember("forWhat"),"Invalid Kill Message, Kill Message with no 'forWhat' field of event %d (KILL_JOB)",event_number);
+        batsim_tools::Kill_Message* msg = new batsim_tools::Kill_Message;
+        msg->simple_id = job_msg["id"].GetString();
+        msg->forWhat = static_cast<batsim_tools::KILL_TYPES>(job_msg["forWhat"].GetInt());
+        msg->id = JobIdentifier(msg->simple_id);
+        message->jobs_msgs[i] = msg;
     }
 
     send_message_at_time(timestamp, "server", IPMessageType::SCHED_KILL_JOB, static_cast<void*>(message));
