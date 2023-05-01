@@ -18,6 +18,7 @@
 #include "pointers.hpp"
 #include "jobs.hpp"
 #include "events.hpp"
+#include "batsim_tools.hpp"
 
 struct BatsimContext;
 struct ServerData;
@@ -185,6 +186,10 @@ struct SchedulingAllocation
  */
 struct ExecuteJobMessage
 {
+<<<<<<< HEAD
+    
+=======
+>>>>>>> testing_conservative_bf
     SchedulingAllocation * allocation; //!< The allocation itself
     ProfilePtr io_profile = nullptr; //!< The optional io profile
 };
@@ -194,7 +199,7 @@ struct ExecuteJobMessage
  */
 struct KillJobMessage
 {
-    std::vector<JobIdentifier> jobs_ids; //!< The ids of the jobs to kill
+    std::vector<batsim_tools::Kill_Message *> jobs_msgs; //!< The ids of the jobs to kill
 };
 
 /**
@@ -203,7 +208,7 @@ struct KillJobMessage
 struct PStateModificationMessage
 {
     IntervalSet machine_ids; //!< The IDs of the machines on which the pstate should be changed
-    int new_pstate; //!< The power state into which the machines should be put
+    unsigned long new_pstate; //!< The power state into which the machines should be put
 };
 
 /**
@@ -212,6 +217,9 @@ struct PStateModificationMessage
 struct CallMeLaterMessage
 {
     double target_time; //!< The time at which Batsim should send a message to the decision real process
+    int id; // CCU-LANL ADDITION
+    int forWhat; // CCU-LANL ADDITION
+    
 };
 
 /**
@@ -241,7 +249,7 @@ struct SchedWaitAnswerMessage
 struct SwitchMessage
 {
     int machine_id; //!< The unique number of the machine which should be switched ON
-    int new_pstate; //!< The power state the machine should be put into
+    unsigned long new_pstate; //!< The power state the machine should be put into
 };
 
 /**
@@ -249,8 +257,8 @@ struct SwitchMessage
  */
 struct KillingDoneMessage
 {
-    std::vector<JobIdentifier> jobs_ids; //!< The IDs of the jobs whose kill has been requested
-    std::map<JobIdentifier, BatTask *> jobs_progress; //!< Stores the progress of the jobs that have really been killed.
+    std::vector<batsim_tools::Kill_Message *> jobs_msgs; //!< The IDs of the jobs whose kill has been requested
+    //!< Stores the progress of the jobs that have really been killed.
     bool acknowledge_kill_on_protocol; //!< Whether to send a JOB_KILLED event to acknowledge the kills
 };
 

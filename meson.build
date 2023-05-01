@@ -26,6 +26,8 @@ docopt_dep = dependency('docopt')
 pugixml_dep = dependency('pugixml')
 intervalset_dep = dependency('intervalset')
 
+add_project_arguments(['-Wno-error'],language: 'cpp')
+
 # old gcc/llvm c++ std libraries have implemented the filesystem lib in a separate lib
 # - https://releases.llvm.org/11.0.1/projects/libcxx/docs/UsingLibcxx.html#using-filesystem
 # - https://gcc.gnu.org/gcc-9/changes.html
