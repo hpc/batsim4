@@ -428,7 +428,6 @@ Reservation Options:
 
    //parse reservations-start
    std::string reservations_start = args["--reservations-start"].asString();
-   XBT_ERROR("reservations_start = %s",reservations_start.c_str());
    if (reservations_start != "false")
    {
     std::map<int,double>* starts = new std::map<int,double>();
@@ -445,7 +444,7 @@ Reservation Options:
                 (*starts)[std::atoi(sm[1].str().c_str())]=double(std::atol((sm[2].str()+sm[3].str()).c_str()));
             reservations_start = sm.suffix().str();
         } 
-        XBT_ERROR("starts 0: %f",(*starts)[0]);
+        
         main_args.reservations_start = starts;
     }
    
