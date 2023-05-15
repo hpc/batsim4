@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "pointers.hpp"
+#include "batsim.hpp"
 
 class Jobs;
 struct Job;
@@ -37,8 +38,10 @@ private:
 
 public:
     //CCU-LANL Additions
+    
+
     /**
-     * @brief Builds an empty static Workload (via dynamic allocation)
+     * @brief Builds an empty static Workload (via dynamic allocation). Making our lives easier by passing main_args
      * @details Static workloads correspond to Batsim input files (workloads or workflows)
      * @param[in] workload_name The workload name
      * @param[in] workload_file The workload file name
@@ -46,15 +49,7 @@ public:
      */
     static Workload * new_static_workload(const std::string & workload_name,
                                           const std::string & workload_file,
-                                            bool checkpointing_on = false,
-                                            bool compute_checkpointing = false,
-                                            double compute_checkpointing_error = 1.0,
-                                            double MTBF = -1,
-                                            double SMTBF = -1,
-                                            double fixedFailures = -1,
-                                            double repair_time=0.0,
-                                            double performance_factor = 1.0,
-                                            double global_checkpointing_interval = -1.0,
+                                          const MainArguments * main_arguments,                     
                                             double speed = 1.0);
 
     /**
@@ -114,6 +109,7 @@ public:
     bool _is_static = false; //!< Whether the workload is dynamic or not
     
     //CCU-LANL Additions
+    const MainArguments* main_arguments = nullptr; //!< The main arguments, makes our lives easier, provides almost all the values below in one handy place
     bool _checkpointing_on = false;  //!< checkpointing has been turned on
     bool _compute_checkpointing = false; //!< the optimal checkpoint interval is computed
     double _compute_checkpointing_error = 1.0; //!< the optimal checkpoint interval is multiplied by this error.  For testing purposes.

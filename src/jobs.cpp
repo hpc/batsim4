@@ -7,6 +7,7 @@
 #include "workload.hpp"
 
 #include <string>
+#include <iostream>
 #include <fstream>
 #include <streambuf>
 #include <algorithm>
@@ -396,6 +397,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                      Workload * workload,
                      const std::string & error_prefix)
 {
+    //get 
+    
     
     // Create and initialize with default values
     auto j = std::make_shared<Job>();
@@ -404,7 +407,6 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     j->runtime = -1;
     j->state = JobState::JOB_STATE_NOT_SUBMITTED;
     j->consumed_energy = -1;
-    
 
     xbt_assert(json_desc.IsObject(), "%s: one job is not an object", error_prefix.c_str());
 
@@ -498,9 +500,35 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     }
     if (json_desc.HasMember("start"))
     {
-        xbt_assert(json_desc["start"].IsNumber(), "%s: job '%s' has non-number field",
+        XBT_ERROR("hello");
+        xbt_assert(json_desc["start"].IsNumber(), "%s: job '%s' has non-number 'start' field",
                     error_prefix.c_str(),j->id.to_string().c_str());
         j->start = json_desc["start"].GetDouble();
+        if (workload->main_arguments->reservations_start != nullptr)
+        {
+            XBT_ERROR("non-null");
+            if (json_desc.HasMember("order"))
+            {
+                XBT_ERROR("has order");
+                xbt_assert(json_desc["order"].IsInt(), "%s: job '%s' has a non-integer 'order' field",
+                    error_prefix.c_str(), j->id.to_string().c_str());
+                int order = json_desc["order"].GetInt();
+                auto search = workload->main_arguments->reservations_start->find(order);
+                if (search != workload->main_arguments->reservations_start->end())
+                {
+                    XBT_ERROR("found");
+                    double move_start = search->second;
+                    XBT_ERROR("move_start: %f",move_start);
+                    XBT_ERROR("j->start: %f",j->start);
+                    j->start = j->start + move_start;
+                    XBT_ERROR("job:  %s   start:%f",j->id.job_name().c_str(),j->start);
+                    xbt_assert(j->start > 0 , "%s: job '%s' has a start time less than or equal to zero",
+                        error_prefix.c_str(),j->id.to_string().c_str());
+                }
+                
+            }
+        }
+        
     }
     if (json_desc.HasMember("alloc"))
     {
@@ -528,6 +556,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     }
     if (!(json_desc_copy.HasMember("submission_times")))
         json_desc_copy.AddMember("submission_times",sub_times,json_desc_copy.GetAllocator());
+    if (json_desc_copy.HasMember("start"))
+        json_desc_copy["start"]=j->start;
 
     /*  *************************************************************************************
         *                                                                                   *

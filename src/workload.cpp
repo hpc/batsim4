@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <streambuf>
+#include <iostream>
 
 #include <rapidjson/document.h>
 
@@ -23,17 +24,10 @@ using namespace rapidjson;
 XBT_LOG_NEW_DEFAULT_CATEGORY(workload, "workload"); //!< Logging
 
 //CCU-LANL Additions Arguments to this function were added
+
 Workload *Workload::new_static_workload(const string & workload_name,
                                         const string & workload_file,
-                                       bool checkpointing_on,
-                                       bool compute_checkpointing,
-                                       double compute_checkpointing_error,
-                                       double MTBF,
-                                       double SMTBF,
-                                       double fixedFailures,
-                                       double repair_time,
-                                       double performance_factor,
-                                       double global_checkpointing_interval,
+                                       const MainArguments* main_arguments,
                                        double speed)
 {
     Workload * workload = new Workload;
@@ -46,15 +40,17 @@ Workload *Workload::new_static_workload(const string & workload_name,
     workload->name = workload_name;
     workload->file = workload_file;
     //CCU-LANL Additions  Arguments added were stored in the workload
-    workload->_checkpointing_on = checkpointing_on;
-    workload->_compute_checkpointing = compute_checkpointing;
-    workload->_compute_checkpointing_error = compute_checkpointing_error;
-    workload->_MTBF = MTBF;
-    workload->_SMTBF = SMTBF;
-    workload->_fixed_failures = fixedFailures;
-    workload->_repair_time = repair_time;
-    workload->_performance_factor = performance_factor;
-    workload->_global_checkpointing_interval=global_checkpointing_interval;
+
+    workload->_checkpointing_on = main_arguments->checkpointing_on;
+    workload->_compute_checkpointing = main_arguments->compute_checkpointing;
+    workload->_compute_checkpointing_error = main_arguments->compute_checkpointing_error;
+    workload->_MTBF = main_arguments->MTBF;
+    workload->_SMTBF = main_arguments->SMTBF;
+    workload->_fixed_failures = main_arguments->fixed_failures;
+    workload->_repair_time = main_arguments->repair_time;
+    workload->_performance_factor = main_arguments->performance_factor;
+    workload->_global_checkpointing_interval=main_arguments->global_checkpointing_interval;
+    workload->main_arguments = main_arguments;
     workload->_speed = speed;
 
     workload->_is_static = true;
@@ -63,7 +59,7 @@ Workload *Workload::new_static_workload(const string & workload_name,
 
 Workload *Workload::new_dynamic_workload(const string & workload_name)
 {
-    Workload * workload = new_static_workload(workload_name, "dynamic");
+    Workload * workload = new_static_workload(workload_name, "dynamic",nullptr);
 
     workload->_is_static = false;
     return workload;

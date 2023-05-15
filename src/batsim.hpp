@@ -141,6 +141,7 @@ struct MainArguments
     std::string repair_time_file = "none";
     int scheduler_queue_depth = -1;
     bool subtract_progress_from_walltime = false;
+    std::map<int,double>* reservations_start = nullptr;
 
 };
 

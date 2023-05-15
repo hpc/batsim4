@@ -29,6 +29,8 @@
 #include <unistd.h>
 
 #include <string>
+#include <regex>
+#include <map>
 #include <fstream>
 #include <functional>
 #include <streambuf>
@@ -303,8 +305,24 @@ Other options:
 Workload Options:
   --shuffle-jobs                     Meant to be used when all jobs arrive at time zero,
                                      This will randomly shuffle the jobs.  Will require
-                                     multiple runs and averages (Monte Carlo)
+                                     multiple runs and averages (Monte Carlo) TODO
                                      [default: false]
+  
+  --reservations-start <STR>         Meant for monte-carlo with reservations, staggering
+                                     their start time.  STR is string in following format:
+                                     '<order#>:<-|+><#seconds>'
+                                        where order# is the order (starting at 0) in the reservation array as described in your config file
+                                        where you (must) choose -(negative,behind) or +(positive,ahead)
+                                        where you specify the amount of seconds forward or backward
+                                     'example_1: --reservations-start '0:+5'
+                                        start the reservations with order# 0, 5 seconds ahead
+                                     'example_2: --reservations-start '1:-2000'
+                                        start the reservations with order# 1, 2000 seconds behind
+                                     'example_3: --reservations-start '0:+5 , 1:-2000'
+                                        only one invocation of this flag is allowed but values for different
+                                        order #s can be acheived with a comma. spaces are allowed for easier viewing.
+                                     [default: false]
+
 Failure Options:
   --MTBF <time-in-seconds>           The Mean Time Between Failure in seconds
                                      [default: -1.0]
@@ -405,8 +423,34 @@ Reservation Options:
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
+
+
+
+   //parse reservations-start
+   std::string reservations_start = args["--reservations-start"].asString();
+   XBT_ERROR("reservations_start = %s",reservations_start.c_str());
+   if (reservations_start != "false")
+   {
+    std::map<int,double>* starts = new std::map<int,double>();
+	const std::regex r(R"(([0-9]+)[ ]*:[ ]*([-+])[ ]*([0-9]+))");  
+	std::smatch sm;
+
+        while (regex_search(reservations_start, sm, r))
+        {
+            if (sm[2]=="+")
+            {
+                (*starts)[std::atoi(sm[1].str().c_str())]=double(std::atol(sm[3].str().c_str())); 
+            }
+            else
+                (*starts)[std::atoi(sm[1].str().c_str())]=double(std::atol((sm[2].str()+sm[3].str()).c_str()));
+            reservations_start = sm.suffix().str();
+        } 
+        XBT_ERROR("starts 0: %f",(*starts)[0]);
+        main_args.reservations_start = starts;
+    }
    
-   
+
+      
   
   
 
@@ -782,18 +826,11 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
     for (const MainArguments::WorkloadDescription & desc : main_args.workload_descriptions)
     {
         
+      
         //CCU-LANL Additions  The arguments to new_static_workload
         Workload * workload = Workload::new_static_workload(desc.name,
                                                              desc.filename,
-                                                             main_args.checkpointing_on,
-                                                             main_args.compute_checkpointing,
-                                                             main_args.compute_checkpointing_error,
-                                                             main_args.MTBF,
-                                                             main_args.SMTBF,
-                                                             main_args.fixed_failures,
-                                                             main_args.repair_time,
-                                                             main_args.performance_factor,
-                                                             main_args.global_checkpointing_interval,
+                                                             &main_args,
                                                              context->machines[0]->speed
                                                             );
 
@@ -808,7 +845,7 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
     // Let's create the workflows
     for (const MainArguments::WorkflowDescription & desc : main_args.workflow_descriptions)
     {
-        Workload * workload = Workload::new_static_workload(desc.workload_name, desc.filename);
+        Workload * workload = Workload::new_static_workload(desc.workload_name, desc.filename,nullptr);
         workload->jobs = new Jobs;
         workload->profiles = new Profiles;
         workload->jobs->set_workload(workload);
