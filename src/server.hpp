@@ -7,7 +7,7 @@
 
 #include <string>
 #include <map>
-
+#include "batsim_tools.hpp"
 #include "ipp.hpp"
 
 struct BatsimContext;

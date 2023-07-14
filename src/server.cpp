@@ -21,6 +21,7 @@
 #include "ipp.hpp"
 #include "network.hpp"
 #include "jobs_execution.hpp"
+#include "batsim_tools.hpp"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(server, "server"); //!< Logging
 namespace r = rapidjson;
@@ -275,12 +276,20 @@ void server_on_job_completed(ServerData * data,
     XBT_ERROR("%d jobs ACTUALLY completed so far. real_time: %s, queue_size: %d, schedule_size: %d",(data->nb_completed_jobs - data->nb_killed_jobs ),real_time.c_str(),data->context->queue_size,data->context->schedule_size);
     if (data->context->output_extra_info)
     {
+        
+        batsim_tools::memInfo node_mem = batsim_tools::get_node_memory_usage();
+        batsim_tools::pid_mem batsim_mem = batsim_tools::get_pid_memory_usage();
+        batsim_tools::pid_mem batsched_mem = batsim_tools::get_pid_memory_usage(data->context->batsched_PID);
         std::ofstream f(data->context->export_prefix+"_extra_info.csv",std::ios_base::app);
         if (f.is_open())
         {
-            f<<std::fixed<<std::setprecision(10)<<double(simgrid::s4u::Engine::get_clock())<<","<<(data->nb_completed_jobs - data->nb_killed_jobs)<<","<<real_time<<","
-                <<data->context->queue_size<<","<<data->context->schedule_size<<","
-                << data->context->nb_running_jobs << ","<< data->context->utilization<<","<<data->context->utilization_no_resv<<std::endl;
+            f<<std::fixed<<std::setprecision(10)<<double(simgrid::s4u::Engine::get_clock())<<","<<(data->nb_completed_jobs - data->nb_killed_jobs)<<","<<real_time
+                <<","<<data->context->queue_size<<","<<data->context->schedule_size
+                <<","<<data->context->nb_running_jobs << ","<< data->context->utilization<<","<<data->context->utilization_no_resv
+                <<","<<node_mem.total<<","<<node_mem.available
+                <<","<<batsim_mem.USS<<","<<batsim_mem.PSS<<","<<batsim_mem.RSS
+                <<","<<batsched_mem.USS<<","<<batsched_mem.PSS<<","<<batsched_mem.RSS
+                <<std::endl;
             f.close();
         }
     }

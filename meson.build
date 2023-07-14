@@ -50,6 +50,8 @@ batsim_deps = [
 
 # Source files
 src_without_main = [
+    'src/batsim_tools.hpp',
+    'src/batsim_tools.cpp',
     'src/batsim.hpp',
     'src/context.cpp',
     'src/context.hpp',

@@ -1463,6 +1463,15 @@ void JsonProtocolReader::handle_notify(int event_number,
 
       context->utilization_no_resv = std::stod(utilization_no_resv);
     }
+    else if (notify_type == "PID")
+    {
+      xbt_assert(data_object.HasMember("data"),"Invalid JSON message: there is no 'data' element to NOTIFY event with type = PID)");
+      const Value & PID_value = data_object["data"];
+      xbt_assert(PID_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = PID is not a string");
+      std::string PID = PID_value.GetString();
+
+      context->batsched_PID = std::stoi(PID);
+    }
     else
     {
         xbt_assert(false, "Unknown NOTIFY type received ('%s').", notify_type.c_str());

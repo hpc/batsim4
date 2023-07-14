@@ -665,7 +665,8 @@ Reservation Options:
         std::ofstream f(main_args.export_prefix+"_extra_info.csv",std::ios_base::out);
         if (f.is_open())
         {
-            f<<"sim_time,actually_completed_jobs,real_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv"<<std::endl;
+            f<<"sim_time,actually_completed_jobs,real_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv"
+            <<"node_mem_total,node_mem_available,batsim_USS,batsim_PSS,batsim_RSS,batsched_USS,batsched_PSS,batsched_RSS"<<std::endl;
             f.close();
         }
     }
