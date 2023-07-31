@@ -331,11 +331,16 @@ Failure Options:
   --fixed-failures <time-in-seconds>          Failures will happen every 'time in seconds'
                                               Can be used in conjunction with SMTBF
                                               [default: -1.0]
-  --seed-failures                    Enables the seeding of random number generators,
+  --seed-failures                    Enables the seeding of random number generators for failures,
                                      making the results non-deterministic
                                      [default: false]
+  --MTTR <time-in-seconds>           Sets a system-wide Mean Time To Repair, in seconds, for a node that goes down
+                                     [default: -1.0]
   --repair-time <time-in-seconds>    Sets a system-wide repair time, in seconds, for a node that goes down
                                      [default: 0.0]
+  --seed-repair-times                Enables the seeding of random number generators for repair times,
+                                     making the results non-deterministic
+                                     [default: false]
   --log-failures                     When set, puts failures and their type in a log file
                                      [default: false]
 Schedule Options:
@@ -423,6 +428,8 @@ Reservation Options:
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
+   main_args.seed_repair_time = args["--seed-repair-times"].asBool();
+   main_args.MTTR = atof(args["--MTTR"].asString().c_str());
 
 
 
@@ -1221,6 +1228,9 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("svg-frame-end",Value().SetInt(main_args.svg_frame_end),alloc);
     context->config_json.AddMember("svg-output-start",Value().SetInt(main_args.svg_output_start),alloc);
     context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
+    context->config_json.AddMember("seed-repair-time",Value().SetBool(main_args.seed_repair_time),alloc);
+    context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
+    
 
 
 

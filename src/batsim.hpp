@@ -125,6 +125,9 @@ struct MainArguments
     double global_checkpointing_interval = -1.0; //!< a global checkpointing interval that will override any computed or other per-job checkpointing
     double repair_time = 0.0; //!< a global repair time for a node to come back on-line after a fault
     double fixed_failures = -1.0; //!< a global time for fixed failures to happen.  Does exactly what SMTBF does except not random times and not based on some distribution. Mostly for debugging.
+    bool seed_repair_time = false; //!< Enable seeding for th erandom number generators for repair time.  Makes it non-deterministic
+    double MTTR = -1.0; //!< The System Mean Time To Repair exponentially distributed with this Mean.
+
     bool log_b_log = false; // !< whether to log failures at expe-out/log/failures.log
     bool share_packing = false; //!< Whether to pack single resource jobs onto one node until core_percent*cores are taken up
     double core_percent = 1.0;   //!< percent of the cores to use on shared machines
