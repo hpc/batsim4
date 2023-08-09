@@ -25,7 +25,9 @@ libzmq_dep = dependency('libzmq')
 docopt_dep = dependency('docopt')
 pugixml_dep = dependency('pugixml')
 intervalset_dep = dependency('intervalset')
-
+if get_option('buildtype') == 'debug'
+    add_project_arguments(['-pg','-g'],language: 'cpp')
+endif
 add_project_arguments(['-Wno-error'],language: 'cpp')
 
 # old gcc/llvm c++ std libraries have implemented the filesystem lib in a separate lib
