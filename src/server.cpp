@@ -990,7 +990,7 @@ void server_on_call_me_later(ServerData * data,
     xbt_assert(task_data->data != nullptr, "inconsistency: task_data has null data");
     auto * message = static_cast<CallMeLaterMessage *>(task_data->data);
 
-    xbt_assert(message->target_time > simgrid::s4u::Engine::get_clock(),
+    xbt_assert(message->target_time >= simgrid::s4u::Engine::get_clock(),
                "You asked to be awaken in the past! (you ask: %f, it is: %f)",
                message->target_time, simgrid::s4u::Engine::get_clock());
 

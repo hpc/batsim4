@@ -11,6 +11,13 @@
 #include "context.hpp"
 #include "jobs.hpp"
 #include "network.hpp"
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 using namespace rapidjson;
 using namespace std;
@@ -1471,6 +1478,42 @@ void JsonProtocolReader::handle_notify(int event_number,
       std::string PID = PID_value.GetString();
 
       context->batsched_PID = std::stoi(PID);
+    }
+    else if (notify_type == "checkpoint")
+    {
+      std::string prefix = context->export_prefix;
+      prefix = prefix.substr(0,prefix.rfind("/"));
+      std::string checkpoint_dir = prefix+"/checkpoint";
+      fs::create_directories(checkpoint_dir);
+      context->jobs_tracer.flush();
+      if (fs::exists(prefix+"/out_jobs.csv"))
+        fs::copy_file(prefix+"/out_jobs.csv",checkpoint_dir+"/out_jobs.csv",fs::copy_options::overwrite_existing);
+      std::ofstream f(checkpoint_dir+"/jobs_running.csv",std::ios_base::out);
+      Workload * w0 = context->workloads["w0"];
+      if (f.is_open())
+      {
+        f<<simgrid::s4u::Engine::get_clock()<<std::endl;
+        f<<"job_id,progress"<<std::endl;
+        for (auto pair : w0->jobs->jobs())
+        {
+          //jobs is an unordered_map<string,Job*>
+          //pair is first:job_id second: job pointer
+          if (pair.second->state == JobState::JOB_STATE_RUNNING || pair.second->is_complete())
+            if (pair.second->is_complete())
+              f<<pair.second->id.to_string()<<","<<"100.0"<<std::endl;
+            else
+              f<<pair.second->id.to_string()<<","<<pair.second->compute_job_progress()->current_task_progress_ratio<<std::endl;
+        }
+        f.close();
+
+        auto * message = new CallMeLaterMessage;
+
+        
+        message->target_time = simgrid::s4u::Engine::get_clock();
+        message->forWhat = 5;
+        message->id = 1;
+        send_message_at_time(timestamp, "server", IPMessageType::SCHED_CALL_ME_LATER, static_cast<void*>(message));
+      }
     }
     else
     {

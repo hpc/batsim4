@@ -239,6 +239,15 @@ Output options:
                                      is written out to '<output_prefix>_extra_info.csv'
                                      This flag will turn it off.
 
+Checkpoint Batsim options:
+  --checkpoint-batsim-interval <string>     Will checkpoint batsim at <string> regular intervals
+                                            Where <string> is in format:
+                                            "real|simulated:days-HH:MM:SS"
+                                            'real' prepended will interpret the interval to be in real time
+                                            'simulated' prepended will interpret the interval to be in simulated time
+                                            False turns off
+                                            [default: False]
+
 
 
 Platform size limit options:
@@ -430,6 +439,8 @@ Reservation Options:
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
    main_args.seed_repair_time = args["--seed-repair-times"].asBool();
    main_args.MTTR = atof(args["--MTTR"].asString().c_str());
+   main_args.checkpoint_batsim_interval = args["--checkpoint-batsim-interval"].asString();
+   
 
 
 
@@ -1230,6 +1241,7 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
     context->config_json.AddMember("seed-repair-time",Value().SetBool(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
+    context->config_json.AddMember("checkpoint-batsim-interval",Value().SetString(main_args.checkpoint_batsim_interval.c_str(),alloc),alloc);
     
 
 

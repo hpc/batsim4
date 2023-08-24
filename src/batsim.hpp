@@ -145,6 +145,7 @@ struct MainArguments
     int scheduler_queue_depth = -1;
     bool subtract_progress_from_walltime = false;
     std::map<int,double>* reservations_start = nullptr;
+    std::string checkpoint_batsim_interval = "False";
 
 };
 
