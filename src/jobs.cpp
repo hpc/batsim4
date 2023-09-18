@@ -31,9 +31,11 @@ using namespace rapidjson;
 XBT_LOG_NEW_DEFAULT_CATEGORY(jobs, "jobs"); //!< Logging
 
 JobIdentifier::JobIdentifier(const std::string & workload_name,
-                             const std::string & job_name) :
+                             const std::string & job_name,int int_job) :
     _workload_name(workload_name),
-    _job_name(job_name)
+    _job_name(job_name),
+    _job_number(int_job)
+    
 {
     check_lexically_valid();
     _representation = representation();
@@ -53,6 +55,7 @@ JobIdentifier::JobIdentifier(const std::string & job_id_str)
 
     this->_workload_name = job_identifier_parts[0];
     this->_job_name = job_identifier_parts[1];
+    this->_job_number = std::stoi(job_identifier_parts[1]);
 
     check_lexically_valid();
     _representation = representation();
@@ -103,6 +106,10 @@ string JobIdentifier::job_name() const
 {
     return _job_name;
 }
+int JobIdentifier::job_number() const
+{
+    return _job_number;
+}
 
 string JobIdentifier::representation() const
 {
@@ -151,6 +158,7 @@ void BatTask::compute_leaf_progress()
             // WARNING: 'get_remaining_ratio' is not returning the flops amount but the remaining quantity of work
             // from 1 (not started yet) to 0 (completely finished)
             current_task_progress_ratio = 1 - ptask->get_remaining_ratio();
+            //current_task_progress_ratio = ptask->get_remaining(); <TRY THIS WITH checkpointing batsim
         }
         else
         {
@@ -332,6 +340,58 @@ const std::unordered_map<JobIdentifier, JobPtr, JobIdentifierHasher> &Jobs::jobs
 {
     return _jobs;
 }
+std::vector<std::pair<JobIdentifier,JobPtr>>* Jobs::get_jobs_as_vector()
+{
+    return new std::vector<std::pair<JobIdentifier, JobPtr>>(_jobs.begin(), _jobs.end());
+}
+std::vector<JobPtr>* Jobs::get_jobs_as_copied_vector()
+{
+    std::vector<JobPtr>* newJobs = new std::vector<JobPtr>;
+    
+    for (auto job : _jobs)
+    {
+        if (job.second->purpose == "reservation")
+            continue;
+        JobPtr new_job = Job::from_json(job.second->json_description,this->_workload);
+        //new_job->profile = new_job->profile->from_json(job.second->profile->name,job.second->profile->json_description);
+        newJobs->push_back(new_job);
+    }
+    return newJobs;
+
+}
+std::vector<JobPtr>*  Jobs::get_jobs_as_copied_vector(std::vector<JobPtr> * oldJobs,Workload* workload)
+{
+    std::vector<JobPtr>* newJobs = new std::vector<JobPtr>;
+    for (auto job : (*oldJobs))
+    {
+        if (job->purpose == "reservation")
+            continue;
+        JobPtr new_job = Job::from_json(job->json_description,workload);
+        //new_job->profile = new_job->profile->from_json(job->profile->name,job->profile->json_description);
+        newJobs->push_back(new_job);
+    }
+    return newJobs;
+
+}
+void Jobs::extend(std::vector<JobPtr> * jobs)
+{
+    for (auto job : (*jobs))
+    {
+        //XBT_INFO("extend job id %s",job->id.job_name().c_str());
+        xbt_assert(!_workload->jobs->exists(job->id),"Error, job %s already exists but is being extended in Jobs::extend()",job->id.job_name().c_str());
+        _workload->jobs->add_job(job);
+        _workload->profiles->add_profile(job->profile->name,job->profile);
+        //XBT_INFO("extended job %s",job->id.job_name().c_str());
+    }
+}
+void Jobs::set_jobs(std::vector<JobPtr> * jobs)
+{
+    
+    for (auto job : (*jobs))
+    {
+        _jobs[job->id]=job;
+    }
+}
 
 std::unordered_map<JobIdentifier, JobPtr, JobIdentifierHasher> &Jobs::jobs()
 {
@@ -414,19 +474,22 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     xbt_assert(json_desc.HasMember("id"), "%s: one job has no 'id' field", error_prefix.c_str());
     xbt_assert(json_desc["id"].IsString() or json_desc["id"].IsInt(), "%s: on job id field is invalid, it should be a string or an integer", error_prefix.c_str());
     string job_id_str;
+    int job_id_int;
     if (json_desc["id"].IsString())
     {
         job_id_str = json_desc["id"].GetString();
+
     }
     else if (json_desc["id"].IsInt())
     {
         job_id_str = to_string(json_desc["id"].GetInt());
+        job_id_int = json_desc["id"].GetInt();
     }
 
     if (job_id_str.find(workload->name) == std::string::npos)
     {
         // the workload name is not present in the job id string
-        j->id = JobIdentifier(workload->name, job_id_str);
+        j->id = JobIdentifier(workload->name, job_id_str,job_id_int);
     }
     else
     {
@@ -450,7 +513,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     }
     else
     {
-        XBT_INFO("DEBUG pushing back submission_time line 450 jobs.cpp");
+       
         j->submission_times.push_back(j->submission_time);
     }
 
@@ -535,7 +598,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     }
     
 
-    XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
+    //XBT_INFO("Profile name %s and '%s'", profile_name.c_str(), j->profile->name.c_str());
     
     //CCU-LANL Additions START    till END
     //since we need to add to the json description and it is a const, this is needed

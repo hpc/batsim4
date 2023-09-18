@@ -39,6 +39,7 @@ struct ServerData
 
     BatsimContext * context = nullptr; //!< The BatsimContext
 
+    
     int nb_completed_jobs = 0;  //!< The number of completed jobs
     int nb_submitted_jobs = 0;  //!< The number of submitted jobs
     int nb_running_jobs = 0;    //!< The number of jobs being executed

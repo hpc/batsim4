@@ -18,7 +18,7 @@ message('batsim version set to: ' + batversion)
 
 # Dependencies
 simgrid_dep = dependency('simgrid')
-boost_dep = dependency('boost')
+boost_dep = dependency('boost',modules:['regex'])
 rapidjson_dep = dependency('RapidJSON')
 redox_dep = dependency('redox')
 libzmq_dep = dependency('libzmq')
@@ -58,8 +58,8 @@ batsim_deps = [
 
 # Source files
 src_without_main = [
-    'src/batsim_tools.hpp',
     'src/batsim_tools.cpp',
+    'src/batsim_tools.hpp',
     'src/batsim.hpp',
     'src/context.cpp',
     'src/context.hpp',

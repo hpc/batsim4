@@ -25,11 +25,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <stdio.h>
 #include <unistd.h>
 
 #include <string>
-#include <regex>
+#include <boost/regex.hpp>
 #include <map>
 #include <fstream>
 #include <functional>
@@ -60,6 +59,7 @@
 #include "server.hpp"
 #include "workload.hpp"
 #include "workflow.hpp"
+#include "batsim_tools.hpp"
 
 #include "docopt/docopt.h"
 
@@ -144,6 +144,7 @@ VerbosityLevel verbosity_level_from_string(const std::string & str)
         throw std::runtime_error("Invalid verbosity level string");
     }
 }
+
 
 void parse_main_args(int argc, char * argv[], MainArguments & main_args, int & return_code,
                      bool & run_simulation)
@@ -303,11 +304,6 @@ Other options:
                                      Currently FAILURES are the only option
                                      [default: false]
 Workload Options:
-  --shuffle-jobs                     Meant to be used when all jobs arrive at time zero,
-                                     This will randomly shuffle the jobs.  Will require
-                                     multiple runs and averages (Monte Carlo) TODO
-                                     [default: false]
-  
   --reservations-start <STR>         Meant for monte-carlo with reservations, staggering
                                      their start time.  STR is string in following format:
                                      '<order#>:<-|+><#seconds>'
@@ -322,7 +318,56 @@ Workload Options:
                                         only one invocation of this flag is allowed but values for different
                                         order #s can be acheived with a comma. spaces are allowed for easier viewing.
                                      [default: false]
-
+  --submission-time-after <STR>      'This dictates the time between submissions and what kind of randomness.
+                                     'format: '<#:(fixed[:#])|(exp|#:unif)[:(#|s[:#]])'
+                                     '   or   'shuffle[:#]'
+                                     'It is applied after sorting the current workload by submit time and after applying the copy option
+                                     'If zero is used for a float,combined with ":fixed" then all jobs will start at time zero.
+                                     'If omitted, the original submission times will be used, be that grizzly produced or synthetically produced
+                                     'exp:    This will be exponentially distributed, random values with mean time between submissions to be FLOAT.
+                                     'fixed:  All jobs will have this time between them unless zero is used for a FLOAT.
+                                     'unif:   This will be uniform, random values from min:max
+                                     's:      Used after the random types (exp|fixed|unif) to specify you want the job's submit times shuffled after.
+                                     'shuffle: Will simply shuffle around the submit times amongst the jobs.
+                                     'a seed can be put on the end of the string to use for deterministic behavior
+                                     'ex:
+                                     '       '--submission-time "200.0:exp:s"'
+                                     '       '--submission-time "100.0:fixed"'
+                                     '       '--submission-time "0.0:fixed"'
+                                     '       '--submission-time "0:200.0:unif"'
+                                     '       '--submission-time "200.0:exp:10"'  <-- 10 is the seed
+                                     '       '--submission-time "0:200.0:unif:20"' <-- 20 is the seed
+                                     '       '--submission-time "shuffle:20" <-- 20 is the seed
+                                     [default: false]
+  --submission-time-before <STR>     Same as --submission-time-after except it is applied before the copy option.  Can use both at the same time.
+                                     [default: false]
+  --copy <STR>                       'The amount of copies the ending workload will have, along with submission time optional options
+                                     'format: '<#copies>[:(+|-):#:(fixed|#:unif:(single|each-copy|all)[:<seed#>] ])'
+                                     '    or  '<#copies>[:=:#(fixed|((exp|:#:unif)[:<seed#>]) ]'
+                                     'So you can just do number of copies, or
+                                     ''=':
+                                     '   * you can copy and set the submission time of the copy as an exponential,uniform,or fixed amount with '=', or
+                                     ''+|-':
+                                     '   * you can add a submission time to add some jitter. This submission time is either added or subtracted with (+|-)
+                                     '   * This time can be a fixed number followed by :fixed or uniform random number between 2 numbers
+                                     '   * If random:
+                                     '       * you need to specify the second number with :#:unif:
+                                     '       * you need to specify:  'single','each-copy',or 'all'
+                                     '       * 'single' random number, single random number for 'each-copy', or random number for 'all'
+                                     '2 copies here means if there are 10 jobs to start with, there will be 20 total after the operation.
+                                     ' Examples:
+                                     '                       '2'    - 2 copies no alteration in submission times
+                                     '             '2:=:100:exp'    - 2 copies with 1 having original times, 1 having exponential random with a mean rate of 100 seconds.
+                                     '             '2:=:0:fixed'    - 2 copies with 1 having original times, 1 having fixed time of 0
+                                     '       '2:=:20:40:unif:30'    - 2 copies with 1 having original times, 1 having uniform random between 20 and 40 seconds. Use 30 as seed.
+                                     '            '2:+:10:fixed'    - 2 copies, add 10 seconds fixed jitter to submission times
+                                     '            '2:-:10:fixed'    - 2 copies, subtract 10 seconds fixed jitter from submission times
+                                     '    '2:+:5:10:unif:single'    - 2 copies, get one random number between 5 and 10 and add it to all copied submission times
+                                     '    '3:+:5:10:unif:all:20'    - 3 copies, get random numbers between 5 and 10 for all jobs of all copies, add it to submission times
+                                     '                                  and seed the random generator with 20
+                                     ' '3:+:5:10:unif:each-copy'    - 3 copies, get one random number between 5 and 10 and add it to all submission times of first copy
+                                     '                                  then get another random number between 5 and 10 and add it to all sub times of second copy
+                                     [default: false]
 Failure Options:
   --MTBF <time-in-seconds>           The Mean Time Between Failure in seconds
                                      [default: -1.0]
@@ -343,6 +388,12 @@ Failure Options:
                                      [default: false]
   --log-failures                     When set, puts failures and their type in a log file
                                      [default: false]
+  --queue-policy <STR>               What the policy for the queue is when dealing with a re-submitted
+                                     job.  The options are:   FCFS | ORIGINAL-FCFS
+                                     Usually the queue is FCFS based on the submit time.
+                                     ORIGINAL-FCFS would put resubmitted jobs at the front of the queue
+                                     based on their original submit time.
+                                     [default: FCFS]
 Schedule Options:
   --queue-depth <int>               The amount of items in the queue that will be scheduled at a time
                                     A lower amount will improve performance of the scheduler and thus the simulation 
@@ -396,10 +447,16 @@ Reservation Options:
     return_code = 1;
     map<string, docopt::value> args = docopt::docopt(usage, { argv + 1, argv + argc },
                                                      true, STR(BATSIM_VERSION));
+    
     // Let's do some checks on the arguments!
     bool error = false;
     return_code = 0;
-
+    /*
+    for (auto key_value:args)
+    {
+        std::cout<<key_value.first<<":    "<<key_value.second<<std::endl;
+    }
+    */
    //CCU-LANL Additions
    main_args.performance_factor = (double) ::atof(args["--performance-factor"].asString().c_str());
    main_args.checkpointing_on = args["--checkpointing-on"].asBool();
@@ -415,7 +472,7 @@ Reservation Options:
    main_args.core_percent = (double) std::atof(args["--core-percent"].asString().c_str());
    main_args.share_packing = args["--share-packing"].asBool();
    main_args.share_packing_holdback = args["--share-packing-holdback"].asLong();
-   main_args.shuffle_jobs = args["--shuffle-jobs"].asBool();
+  
    main_args.reschedule_policy = args["--reschedule-policy"].asString();
    main_args.output_svg = args["--output-svg"].asString();
    main_args.impact_policy = args["--impact-policy"].asString();
@@ -430,18 +487,166 @@ Reservation Options:
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
    main_args.seed_repair_time = args["--seed-repair-times"].asBool();
    main_args.MTTR = atof(args["--MTTR"].asString().c_str());
+   main_args.queue_policy = args["--queue-policy"].asString();
+   std::string copy = args["--copy"].asString();
+   std::string submission_time_after = args["--submission-time-after"].asString();
+   std::string submission_time_before = args["--submission-time-before"].asString();
+   std::string submission_time;
+   std::string ourRegExString;
+   std::string decimal=R"((?:\d+(?:\.\d*)?|\.\d+))";
+   boost::smatch sm;
+   boost::regex aRegEx;
+   bool regExMatch = false;
+   //parse copy:
+   if (copy != "false")
+   {
+    MainArguments::Copies * copies = new MainArguments::Copies();
+    //can be just an int or followed by +|-|= followed by :int followed by fixed|exp|:int then 
+    //   if fixed nothing should come after it
+    //   if exp optionally followed by :int
+    //   if :int followed by :unif: followed by single|each-copy|all optionally followed by :int
+    aRegEx = boost::regex(R"(([0-9]+)(?:$|(?:[:]([+]|[-]|[=]):([0-9]+):(fixed|exp|[0-9]+)(?:$|(?:(?<=exp):([0-9]+)$)|(?:[:](unif):(single|each[-]copy|all)(?:$|(?:[:]([0-9]+))))))))");
+    regExMatch = boost::regex_match(copy,sm,aRegEx);
+    //sm [1]=int [2]=+|-|=|blank [3]=int|blank [4]=fixed|exp|int|blank [5]=int|blank  [6]=unif|blank [7]=single|each-copy|all|blank [8]=int|blank
+    if (regExMatch)
+    {
+        copies->copies=sm[1];  // = int
+        copies->symbol=sm[2];  // = +|-|blank
+        copies->value1=sm[3];  // = int|blank
+        copies->value2=sm[4];  // = fixed|exp|int|blank
+        copies->seed=sm[5];    // = int|blank
+        copies->unif=sm[6];    // = unif|blank
+        copies->howMany=sm[7]; // = single|each-copy|all|blank
+        if (copies->seed=="")
+            copies->seed=sm[8];
+        main_args.copy = copies;
+        
+    }
+    xbt_assert(regExMatch,"Error: '--copy %s' is in the wrong format",submission_time.c_str());
+   }
+   submission_time = submission_time_after;
+   if (submission_time !="false")
+   {
+        MainArguments::SubmissionTimes * submission_times = new MainArguments::SubmissionTimes();
+        
+        ourRegExString = 
+            batsim_tools::string_format(R"((%s):(exp|fixed)(?:$|(?:[:](?<=exp[:])(?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))",decimal.c_str());
 
-
+        aRegEx = boost::regex(ourRegExString);
+        regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+        if (regExMatch)
+        {
+            submission_times->value1=sm[1];    // = float|blank
+            submission_times->value2="";       // = float|blank
+            submission_times->random=sm[2];    // = exp|fixed|unif|blank
+            submission_times->shuffle=sm[3];   // = s|shuffle|blank
+            submission_times->seed=sm[4];      // = int|blank
+            if (submission_times->seed=="")
+                submission_times->seed=sm[5];
+            main_args.submission_time_after = submission_times;
+        }
+        else
+        {
+            ourRegExString = 
+                batsim_tools::string_format(R"((%s):(%s):(unif)(?:$|(?:[:](?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))",decimal.c_str(),decimal.c_str());
+            aRegEx = boost::regex(ourRegExString);
+            regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+            if (regExMatch)
+            {
+                submission_times->value1=sm[1];
+                submission_times->value2=sm[2];
+                submission_times->random=sm[3];
+                submission_times->shuffle=sm[4];
+                submission_times->seed=sm[5];
+                if (submission_times->seed == "")
+                    submission_times->seed=sm[6];
+                  
+            }
+            else
+            {
+                aRegEx = boost::regex(R"((shuffle)(?:$|(?:[:]([0-9]+))))");
+                regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+                if (regExMatch)
+                {
+                    submission_times->value1="";
+                    submission_times->value2="";
+                    submission_times->random="";
+                    submission_times->shuffle=sm[1];
+                    submission_times->seed=sm[2];
+                }
+                
+            }
+            xbt_assert(regExMatch,"Error: '--submission-time %s' is in the wrong format",submission_time.c_str());
+            main_args.submission_time_after = submission_times;
+        }
+        
+   }
+      submission_time = submission_time_before;
+   if (submission_time !="false")
+   {
+        MainArguments::SubmissionTimes * submission_times = new MainArguments::SubmissionTimes();
+        std::string decimal=R"(((?:\d+(?:\.\d*)?|\.\d+)))";
+        std::string format2 = R"(:(exp|fixed)(?:$|(?:[:](?<=exp[:])(?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))";
+        std::string ourRegEx = decimal + format2;
+        aRegEx = boost::regex(ourRegEx);
+        regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+        if (regExMatch)
+        {
+            submission_times->value1=sm[1];    // = float|blank
+            submission_times->value2="";       // = float|blank
+            submission_times->random=sm[2];    // = exp|fixed|unif|blank
+            submission_times->shuffle=sm[3];   // = s|shuffle|blank
+            submission_times->seed=sm[4];      // = int|blank
+            if (submission_times->seed=="")
+                submission_times->seed=sm[5];
+            main_args.submission_time_before = submission_times;
+        }
+        else
+        {
+            std::string format = R"(:(unif)(?:$|(?:[:](?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))";
+            std::string ourRegEx2 = decimal+":"+decimal+format;
+            aRegEx = boost::regex(ourRegEx2);
+            regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+            if (regExMatch)
+            {
+                submission_times->value1=sm[1];
+                submission_times->value2=sm[2];
+                submission_times->random=sm[3];
+                submission_times->shuffle=sm[4];
+                submission_times->seed=sm[5];
+                if (submission_times->seed == "")
+                    submission_times->seed=sm[6];
+                  
+            }
+            else
+            {
+                aRegEx = boost::regex(R"((shuffle)(?:$|(?:[:]([0-9]+))))");
+                regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+                if (regExMatch)
+                {
+                    submission_times->value1="";
+                    submission_times->value2="";
+                    submission_times->random="";
+                    submission_times->shuffle=sm[1];
+                    submission_times->seed=sm[2];
+                }
+                
+            }
+            xbt_assert(regExMatch,"Error: '--submission-time %s' is in the wrong format",submission_time.c_str());
+            main_args.submission_time_before = submission_times;
+        }
+        
+   }
 
    //parse reservations-start
    std::string reservations_start = args["--reservations-start"].asString();
    if (reservations_start != "false")
    {
     std::map<int,double>* starts = new std::map<int,double>();
-	const std::regex r(R"(([0-9]+)[ ]*:[ ]*([-+])[ ]*([0-9]+))");  
-	std::smatch sm;
+	aRegEx = boost::regex(R"(([0-9]+)[ ]*:[ ]*([-+])[ ]*([0-9]+))");
+    
 
-        while (regex_search(reservations_start, sm, r))
+        while (boost::regex_search(reservations_start, sm, aRegEx))
         {
             if (sm[2]=="+")
             {
@@ -672,7 +877,7 @@ Reservation Options:
         std::ofstream f(main_args.export_prefix+"_extra_info.csv",std::ios_base::out);
         if (f.is_open())
         {
-            f<<"sim_time,actually_completed_jobs,real_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv"
+            f<<"actually_completed_jobs,nb_jobs,percent_done,real_time,sim_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv,"
             <<"node_mem_total,node_mem_available,batsim_USS,batsim_PSS,batsim_RSS,batsched_USS,batsched_PSS,batsched_RSS"<<std::endl;
             f.close();
         }
@@ -844,6 +1049,7 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
         
         int nb_machines_in_workload = -1;
         workload->load_from_json(desc.filename, nb_machines_in_workload);
+        context->nb_jobs = workload->jobs->nb_jobs();
         max_nb_machines_in_workloads = std::max(max_nb_machines_in_workloads, nb_machines_in_workload);
 
         context->workloads.insert_workload(desc.name, workload);
@@ -1230,6 +1436,7 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
     context->config_json.AddMember("seed-repair-time",Value().SetBool(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
+    context->config_json.AddMember("queue-policy",Value().SetString(main_args.queue_policy.c_str(),alloc),alloc);
     
 
 

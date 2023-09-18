@@ -283,7 +283,11 @@ void server_on_job_completed(ServerData * data,
         std::ofstream f(data->context->export_prefix+"_extra_info.csv",std::ios_base::app);
         if (f.is_open())
         {
-            f<<std::fixed<<std::setprecision(10)<<double(simgrid::s4u::Engine::get_clock())<<","<<(data->nb_completed_jobs - data->nb_killed_jobs)<<","<<real_time
+            int actually_completed_jobs = data->nb_completed_jobs - data->nb_killed_jobs;
+            double percent = (double(actually_completed_jobs)/double(data->context->nb_jobs)) *100.0;
+            f<<std::fixed<<std::setprecision(10)
+                <<actually_completed_jobs<<","<<data->context->nb_jobs<<","<<std::setprecision(2)<<percent
+                <<","<<std::fixed<<std::setprecision(10)<<real_time<<","<<double(simgrid::s4u::Engine::get_clock())
                 <<","<<data->context->queue_size<<","<<data->context->schedule_size
                 <<","<<data->context->nb_running_jobs << ","<< data->context->utilization<<","<<data->context->utilization_no_resv
                 <<","<<node_mem.total<<","<<node_mem.available

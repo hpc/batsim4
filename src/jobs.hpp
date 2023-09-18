@@ -40,7 +40,7 @@ public:
      * @param[in] job_name The job name
      */
     explicit JobIdentifier(const std::string & workload_name,
-                           const std::string & job_name);
+                           const std::string & job_name,int int_id=-1);
 
     /**
      * @brief Creates a JobIdentifier from a string to parse
@@ -86,6 +86,12 @@ public:
      * @return The job name within the workload.
      */
     std::string job_name() const;
+    /**
+     * @brief Returns the job number as an int
+     * @return the integer number
+     * 
+     */
+    int job_number() const;
 
 private:
     /**
@@ -97,6 +103,7 @@ private:
 private:
     std::string _workload_name; //!< The name of the workload the job belongs to
     std::string _job_name; //!< The job unique name inside its workload
+    int _job_number=0;
     std::string _representation; //!< Stores a string representation of the JobIdentifier
 };
 
@@ -253,6 +260,7 @@ struct Job
     double start = -1.0; //when a job will start (reservation)
     IntervalSet future_allocation; //!< The future allocation of a job (reservation)
     std::vector<double> submission_times;
+    std::string jitter = "";
 public:
     /**
      * @brief Computes the task progression of this job
@@ -436,12 +444,22 @@ public:
      * @return the number of jobs of the Jobs instance
      */
     int nb_jobs() const;
+    /**
+     * @brief Returns a vector of the _jobs in the unordered_map
+     * @return the vector of JobPtrs
+     */
+    std::vector<std::pair<JobIdentifier,JobPtr>>* get_jobs_as_vector();
+    std::vector<JobPtr>* get_jobs_as_copied_vector();
+    static std::vector<JobPtr>* get_jobs_as_copied_vector(std::vector<JobPtr> * oldJobs,Workload * workload);
+    void extend(std::vector<JobPtr>* jobs);
+    void set_jobs(std::vector<JobPtr>* jobs);
 
 private:
     std::unordered_map<JobIdentifier, JobPtr, JobIdentifierHasher> _jobs; //!< The map that contains the jobs
     std::unordered_map<JobIdentifier, bool, JobIdentifierHasher> _jobs_met; //!< Stores the jobs id already met during the simulation
     Profiles * _profiles = nullptr; //!< The profiles associated with the jobs
     Workload * _workload = nullptr; //!< The Workload the jobs belong to
+
 };
 
 /**

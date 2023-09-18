@@ -997,6 +997,7 @@ void JobsTracer::initialize(BatsimContext *context,
         "read_time",//*
         "MTBF",//*
         "SMTBF",//*
+        "jitter",//*
         "fixed-failures",//*
         "repair-time",//*
         "Tc_Error",//*
@@ -1296,6 +1297,7 @@ void JobsTracer::write_job(const JobPtr job)
     _job_map["SMTBF"]=job->workload->_SMTBF==-1 ? "" : to_string(static_cast<double>(job->workload->_SMTBF));
     _job_map["fixed-failures"] = job->workload->_fixed_failures == -1 ? "" : to_string(static_cast<double>(job->workload->_fixed_failures));
     _job_map["repair-time"]=to_string(static_cast<double>(job->workload->_repair_time));
+    _job_map["jitter"]=job->jitter;
     
     _job_map["Tc_Error"]=job->workload->_compute_checkpointing == false  ? "" : to_string(static_cast<double>(job->workload->_compute_checkpointing_error));
     switch (job->profile->type){

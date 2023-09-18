@@ -90,6 +90,7 @@ struct BatsimContext
     int queue_size = -1;
     int schedule_size = -1;
     int nb_running_jobs = 0;
+    int nb_jobs = 0;                                //!< The number of jobs we started with once simulation starts
     double utilization = 0;
     double utilization_no_resv = 0;
     bool output_extra_info = true;

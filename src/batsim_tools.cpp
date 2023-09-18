@@ -2,6 +2,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <fstream>
+#include <iostream>
+#include <memory>
+
 
 
 
@@ -33,7 +36,6 @@ pid_t batsim_tools::get_batsim_pid()
 {
     return getpid();
 }
-
 
 batsim_tools::pid_mem batsim_tools::get_pid_memory_usage()
 {

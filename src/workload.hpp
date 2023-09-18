@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <random>
 
 #include "pointers.hpp"
 #include "batsim.hpp"
@@ -100,6 +101,19 @@ public:
      * @return Whether the workload is static or not
      */
     bool is_static() const;
+    /**
+     * @brief Changes the jobs and profiles, currently because of copy and submission-time options
+     * 
+     */
+    void alter_workload();
+    void copyComponents(int startId,
+                              MainArguments::Copies * copy,
+                              int &randomNumber,std::vector<JobPtr>* oldJobs,
+                              std::vector<JobPtr>* &newJobs,
+                              std::exponential_distribution<double>* &exponential_distribution,
+                              std::uniform_int_distribution<int> * &uniform_distribution,
+                              std::mt19937* &generator);
+    void change_submits(MainArguments::SubmissionTimes * submission_time);
 
 public:
     std::string name; //!< The Workload name

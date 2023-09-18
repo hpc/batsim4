@@ -4,6 +4,7 @@
 #include <list>
 #include <map>
 #include <vector>
+#include "batsim_tools.hpp"
 
 #include <rapidjson/document.h>
 
@@ -49,6 +50,34 @@ struct MainArguments
         std::string name;           //!< The name of the workflow
         std::string workload_name;  //!< The name of the workload associated with the workflow
         double start_time;          //!< The moment in time at which the workflow should be started
+    };
+    /**
+     * @brief Stores the results of --copy option
+     * 
+     */
+    struct Copies 
+    { 
+        std::string copies;
+        std::string symbol;
+        std::string value1;
+        std::string value2;
+        std::string seed;
+        std::string unif;
+        std::string howMany;
+        
+
+    };
+    /**
+     * @brief Stores the results of --submission-time option
+     * 
+     */
+    struct SubmissionTimes
+    {
+        std::string value1;
+        std::string value2;
+        std::string random;
+        std::string shuffle;
+        std::string seed;
     };
 
    /**
@@ -132,7 +161,7 @@ struct MainArguments
     bool share_packing = false; //!< Whether to pack single resource jobs onto one node until core_percent*cores are taken up
     double core_percent = 1.0;   //!< percent of the cores to use on shared machines
     long share_packing_holdback = 0;
-    bool shuffle_jobs = false; //TODO
+    
     std::string reschedule_policy = "RESCHEDULE_AFFECTED";
     std::string impact_policy = "LEAST_KILLING_LARGEST_FIRST"; // kill largest jobs first, if needed, when reserving arbitrary nodes
     std::string output_svg = "none";
@@ -145,6 +174,11 @@ struct MainArguments
     int scheduler_queue_depth = -1;
     bool subtract_progress_from_walltime = false;
     std::map<int,double>* reservations_start = nullptr;
+
+    Copies * copy = nullptr;
+    SubmissionTimes * submission_time_after= nullptr;
+    SubmissionTimes * submission_time_before = nullptr;
+    std::string queue_policy = "";
 
 };
 
