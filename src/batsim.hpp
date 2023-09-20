@@ -146,6 +146,7 @@ struct MainArguments
     bool subtract_progress_from_walltime = false;
     std::map<int,double>* reservations_start = nullptr;
     std::string checkpoint_batsim_interval = "False";
+    int start_from_checkpoint = -1;
 
 };
 

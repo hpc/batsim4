@@ -116,7 +116,7 @@ struct ParallelHomogeneousProfileData
     double com; //!< The communication amount between each pair of nodes
 
     //CCU-LANL Additions
-    double real_cpu;  //!< The computation amount on each node (forward work)
+    double real_cpu=0;  //!< The computation amount on each node (forward work)
 };
 
 /**
@@ -128,7 +128,7 @@ struct ParallelHomogeneousTotalAmountProfileData
     double com; //!< The communication amount to spread over each pair of nodes
 
     //CCU-LANL Additions
-    double real_cpu; //!< The computation amount to spread over the nodes (forward work)
+    double real_cpu=0; //!< The computation amount to spread over the nodes (forward work)
 };
 /**
  * @brief The data associated to DELAY profiles
@@ -138,7 +138,7 @@ struct DelayProfileData
     double delay; //!< The time amount, in seconds, that the job is supposed to take
     
     //CCU-LANL Additions
-    double real_delay; //!< The time amount that is the actual amount of forward work that is supposed to take place [checkpointing_on]
+    double real_delay=0; //!< The time amount that is the actual amount of forward work that is supposed to take place [checkpointing_on]
 };
 
 /**

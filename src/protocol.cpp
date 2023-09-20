@@ -1488,32 +1488,16 @@ void JsonProtocolReader::handle_notify(int event_number,
       context->jobs_tracer.flush();
       if (fs::exists(prefix+"/out_jobs.csv"))
         fs::copy_file(prefix+"/out_jobs.csv",checkpoint_dir+"/out_jobs.csv",fs::copy_options::overwrite_existing);
-      std::ofstream f(checkpoint_dir+"/jobs_running.csv",std::ios_base::out);
       Workload * w0 = context->workloads["w0"];
-      if (f.is_open())
-      {
-        f<<simgrid::s4u::Engine::get_clock()<<std::endl;
-        f<<"job_id,progress"<<std::endl;
-        for (auto pair : w0->jobs->jobs())
-        {
-          //jobs is an unordered_map<string,Job*>
-          //pair is first:job_id second: job pointer
-          if (pair.second->state == JobState::JOB_STATE_RUNNING || pair.second->is_complete())
-            if (pair.second->is_complete())
-              f<<pair.second->id.to_string()<<","<<"100.0"<<std::endl;
-            else
-              f<<pair.second->id.to_string()<<","<<pair.second->compute_job_progress()->current_task_progress_ratio<<std::endl;
-        }
-        f.close();
-
+      w0->write_out_workload(checkpoint_dir+"/workload.json",context->machines.nb_machines());
+      
         auto * message = new CallMeLaterMessage;
 
         
         message->target_time = simgrid::s4u::Engine::get_clock();
-        message->forWhat = 5;
-        message->id = 1;
+        message->forWhat = static_cast<int>(batsim_tools::call_me_later_types::CHECKPOINT_BATSCHED);
+        message->id = 1; //this value doesn't really matter.  If the frequency of checkpoints was high, it may matter.
         send_message_at_time(timestamp, "server", IPMessageType::SCHED_CALL_ME_LATER, static_cast<void*>(message));
-      }
     }
     else
     {

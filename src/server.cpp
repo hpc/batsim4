@@ -946,6 +946,7 @@ void server_on_reject_job(ServerData * data,
 void server_on_kill_jobs(ServerData * data,
                          IPMessage * task_data)
 {
+    
     xbt_assert(task_data->data != nullptr, "inconsistency: task_data has null data");
     auto * message = static_cast<KillJobMessage *>(task_data->data);
 
@@ -961,7 +962,13 @@ void server_on_kill_jobs(ServerData * data,
 
         // Let's discard jobs whose kill has already been requested
         if (!job->kill_requested)
-        {
+        {   
+            /* not going to implement this but it is a potential problem
+            //first let's check if the job is actually done
+            double epsilon = 1e-9;
+            if (std::abs(job->compute_job_progress()->current_task_progress_ratio - 1.0) < epsilon)
+                continue; //ok the job is done, continue with other killed jobs but leave this one alone
+            */
             // Let's check the job state
             xbt_assert(job->state == JobState::JOB_STATE_RUNNING || job->is_complete(),
                        "Invalid KILL_JOB: job_id '%s' refers to a job not being executed nor completed.",
@@ -989,10 +996,11 @@ void server_on_call_me_later(ServerData * data,
 {
     xbt_assert(task_data->data != nullptr, "inconsistency: task_data has null data");
     auto * message = static_cast<CallMeLaterMessage *>(task_data->data);
-
-    xbt_assert(message->target_time >= simgrid::s4u::Engine::get_clock(),
-               "You asked to be awaken in the past! (you ask: %f, it is: %f)",
-               message->target_time, simgrid::s4u::Engine::get_clock());
+    double epsilon=1e-9;
+    double difference = message->target_time+epsilon - double(simgrid::s4u::Engine::get_clock());
+    xbt_assert(difference >= 0,
+               "You asked to be awaken in the past! (you ask: %f, it is: %f,diff: %f)",
+               message->target_time, simgrid::s4u::Engine::get_clock(),difference);
 
     string pname = "waiter " + to_string(message->target_time);
     simgrid::s4u::Actor::create(pname.c_str(),

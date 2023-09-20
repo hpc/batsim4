@@ -175,11 +175,14 @@ struct BatTask
      */
     void compute_tasks_progress();
 
+    
+
 private:
     /**
      * @brief Compute the progress of a leaf task
      */
     void compute_leaf_progress();
+   
 
 public:
     JobPtrWeak parent_job; //!< The parent job that owns this task
@@ -197,6 +200,7 @@ public:
     std::vector<BatTask*> sub_tasks; //!< List of sub tasks that must be executed sequentially. Only set for BatTask non-leaves with sequential profiles at the moment, but it may be used for parallel composition in the future.
     unsigned int current_task_index = static_cast<unsigned int>(-1); //!< Index of the task that is currently being executed in the sub_tasks vector. Only set for BatTask non-leaves with sequential profiles.
     double current_task_progress_ratio = 0; //!< Gives the progress of the current task from 0 to 1. Only set for BatTask non-leaves with sequential profiles.
+
 };
 
 
@@ -253,12 +257,20 @@ struct Job
     double start = -1.0; //when a job will start (reservation)
     IntervalSet future_allocation; //!< The future allocation of a job (reservation)
     std::vector<double> submission_times;
+    bool chkpt_completed=false; //!< Used for checkpointing
+    double chkpt_progress=-1.0; //!< Used for checkpointing
 public:
     /**
      * @brief Computes the task progression of this job
      * @return The task progress tree with filled-up associated values
      */
     BatTask * compute_job_progress();
+
+    /**
+     * @brief Computes the task progression of this job
+     * @return The task progress tree with filled-up associated values
+     */
+    BatTask * compute_job_progress_flops();
 
     /**
      * @brief Creates a new-allocated Job from a JSON description

@@ -180,6 +180,7 @@ void BatTask::compute_leaf_progress()
     }
 }
 
+
 void BatTask::compute_tasks_progress()
 {
     if (profile->type == ProfileType::SEQUENCE)

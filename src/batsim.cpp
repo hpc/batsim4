@@ -247,8 +247,10 @@ Checkpoint Batsim options:
                                             'simulated' prepended will interpret the interval to be in simulated time
                                             False turns off
                                             [default: False]
-
-
+  --start-from-checkpoint <int>      Will start batsim from checkpoint #.
+                                     Numbers go back in time...so 1 is the latest, 2 is the second latest
+                                     Currently the only valid number is 1, the latest
+                                     [default: -1]
 
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
@@ -408,7 +410,12 @@ Reservation Options:
     // Let's do some checks on the arguments!
     bool error = false;
     return_code = 0;
-
+/*comment this code, only for debug
+    for( auto pair : args)
+    {
+        std::cout<<pair.first<<": "<<pair.second<<std::endl;
+    }
+/**/
    //CCU-LANL Additions
    main_args.performance_factor = (double) ::atof(args["--performance-factor"].asString().c_str());
    main_args.checkpointing_on = args["--checkpointing-on"].asBool();
@@ -440,6 +447,7 @@ Reservation Options:
    main_args.seed_repair_time = args["--seed-repair-times"].asBool();
    main_args.MTTR = atof(args["--MTTR"].asString().c_str());
    main_args.checkpoint_batsim_interval = args["--checkpoint-batsim-interval"].asString();
+   main_args.start_from_checkpoint = args["--start-from-checkpoint"].asLong();
    
 
 
