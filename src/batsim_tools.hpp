@@ -13,6 +13,7 @@ namespace batsim_tools{
 
     
     enum class KILL_TYPES {NONE,FIXED_FAILURES,SMTBF,MTBF,RESERVATION};
+    enum class call_me_later_types {FIXED_FAILURE,SMTBF,MTBF,REPAIR_DONE,RESERVATION_START,CHECKPOINT_BATSCHED,RECOVER_FROM_CHECKPOINT};
     struct Kill_Message{
         std::string simple_id;
         JobIdentifier id;

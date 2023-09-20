@@ -240,7 +240,18 @@ Output options:
                                      is written out to '<output_prefix>_extra_info.csv'
                                      This flag will turn it off.
 
-
+Checkpoint Batsim options:
+  --checkpoint-batsim-interval <string>     Will checkpoint batsim at <string> regular intervals
+                                            Where <string> is in format:
+                                            "real|simulated:days-HH:MM:SS"
+                                            'real' prepended will interpret the interval to be in real time
+                                            'simulated' prepended will interpret the interval to be in simulated time
+                                            False turns off
+                                            [default: False]
+  --start-from-checkpoint <int>      Will start batsim from checkpoint #.
+                                     Numbers go back in time...so 1 is the latest, 2 is the second latest
+                                     Currently the only valid number is 1, the latest
+                                     [default: -1]
 
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
@@ -451,12 +462,12 @@ Reservation Options:
     // Let's do some checks on the arguments!
     bool error = false;
     return_code = 0;
-    /*
+    /* comment this code, only for debugging options
     for (auto key_value:args)
     {
         std::cout<<key_value.first<<":    "<<key_value.second<<std::endl;
     }
-    */
+    /**/
    //CCU-LANL Additions
    main_args.performance_factor = (double) ::atof(args["--performance-factor"].asString().c_str());
    main_args.checkpointing_on = args["--checkpointing-on"].asBool();
@@ -487,6 +498,8 @@ Reservation Options:
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
    main_args.seed_repair_time = args["--seed-repair-times"].asBool();
    main_args.MTTR = atof(args["--MTTR"].asString().c_str());
+   main_args.checkpoint_batsim_interval = args["--checkpoint-batsim-interval"].asString();
+   main_args.start_from_checkpoint = args["--start-from-checkpoint"].asLong();
    main_args.queue_policy = args["--queue-policy"].asString();
    std::string copy = args["--copy"].asString();
    std::string submission_time_after = args["--submission-time-after"].asString();
@@ -531,6 +544,8 @@ Reservation Options:
         
         ourRegExString = 
             batsim_tools::string_format(R"((%s):(exp|fixed)(?:$|(?:[:](?<=exp[:])(?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))",decimal.c_str());
+
+   
 
         aRegEx = boost::regex(ourRegExString);
         regExMatch = boost::regex_match(submission_time,sm,aRegEx);
@@ -1437,6 +1452,7 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("seed-repair-time",Value().SetBool(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
     context->config_json.AddMember("queue-policy",Value().SetString(main_args.queue_policy.c_str(),alloc),alloc);
+    context->config_json.AddMember("checkpoint-batsim-interval",Value().SetString(main_args.checkpoint_batsim_interval.c_str(),alloc),alloc);
     
 
 

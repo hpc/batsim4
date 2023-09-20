@@ -8,6 +8,7 @@
 #include <fstream>
 #include <streambuf>
 #include <iostream>
+#include <iomanip>
 
 #include <rapidjson/document.h>
 
@@ -535,6 +536,125 @@ void Workload::check_single_job_validity(const JobPtr job)
 string Workload::to_string()
 {
     return this->name;
+}
+bool Workload::write_out_workload(const std::string filename,int nb_machines)
+{
+    std::ofstream f(filename,std::ios_base::out);
+    if (f.is_open())
+    {
+        //start our file
+        f<<std::fixed<<std::setprecision(15)
+        <<"{\n"
+            <<"\t\"nb_res\":"<<nb_machines<<",\n"
+            <<"\t\"jobs\":[\n";
+
+        //lets do our jobs first
+        bool first=true;
+        bool running = false;
+        double progress = 0;
+        double submit = 0;
+        double now = double(simgrid::s4u::Engine::get_clock());
+        int state = 0;
+        long double runtime=0;
+        std::string allocation;
+        std::string future_allocation;
+        
+        for (auto pair: this->jobs->jobs())
+        {
+            //I only want jobs that are not complete
+            if (pair.second != nullptr && !pair.second->is_complete())
+            {
+                if (!first)
+                {
+                    //ok we can close out the previous one
+                    f<<"\t\t},\n";
+                }
+                first=false;
+                running = false;
+                progress = 0;
+                submit = 0;
+                
+                state = static_cast<int>(pair.second->state);
+                runtime=0;
+                
+                future_allocation=pair.second->future_allocation.to_string_hyphen();
+
+                //start our job
+                
+                if (pair.second->state == JobState::JOB_STATE_RUNNING)
+                {
+                    running = true;
+                    submit = now;
+                    progress = pair.second->compute_job_progress()->current_task_progress_ratio;
+                    allocation = pair.second->allocation.to_string_hyphen();
+                    runtime = now - pair.second->starting_time;
+                }
+                else
+                {
+                    submit = pair.second->submission_time;
+                    progress = 0;
+                    allocation = "null";
+    
+                }    
+                    
+                    f<<"\t\t{\n"
+                        <<"\t\t\t"  << "\"id\":\""                  <<  pair.first.job_name()           <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"subtime\":"               <<  submit                          <<","<<std::endl
+                        <<"\t\t\t"  << "\"state\":"                 <<  state                           <<","<<std::endl
+                        <<"\t\t\t"  << "\"progress\":"              <<  progress                        <<","<<std::endl
+                        <<"\t\t\t"  << "\"allocation\":\""          <<  allocation                      <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"requested_nb_res\":"      <<  pair.second->requested_nb_res   <<","<<std::endl
+                        <<"\t\t\t"  << "\"walltime\":"              <<  pair.second->walltime           <<","<<std::endl
+
+                        <<"\t\t\t"  << "\"batsim_metadata\":\""     <<  pair.second->batsim_metadata    <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"checkpoint_interval\":"   <<  pair.second->checkpoint_interval<<","<<std::endl
+                        <<"\t\t\t"  << "\"consumed_energy\":"       <<  pair.second->consumed_energy    <<","<<std::endl
+                        <<"\t\t\t"  << "\"cores\":"                 <<  pair.second->cores              <<","<<std::endl
+                        <<"\t\t\t"  << "\"dump_time\":"             <<  pair.second->dump_time          <<","<<std::endl
+                        <<"\t\t\t"  << "\"future_allocation\":\""   <<  future_allocation               <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"metadata\":\""            <<  pair.second->metadata           <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"purpose\":\""             <<  pair.second->purpose            <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"read_time\":"             <<  pair.second->read_time          <<","<<std::endl
+                        <<"\t\t\t"  << "\"runtime\":"               <<  runtime                         <<","<<std::endl
+                        <<"\t\t\t"  << "\"start\":"                 <<  pair.second->start              <<","<<std::endl
+                        <<"\t\t\t"  << "\"starting_time\":"         <<  pair.second->starting_time      <<std::endl;
+                     
+                
+            }
+          
+            
+        }
+ 
+        //ok we close out the last job without a comma, then close out jobs array
+         f<<"\t\t}\n"
+         <<"\t],\n";
+        //now we do profiles, lets start it out
+        f<<"\t\"profiles\":{\n";
+        first=true;
+        for (auto profile_pair:this->profiles->profiles())
+        {
+            if (profile_pair.second != nullptr)
+            {
+            if (!first)
+            {
+                //ok we can close out the previous one with a comma
+                f<<",\n";
+            }
+            first=false;
+            
+            f<<"\t\t\""<<profile_pair.first<<"\":"<<  profile_pair.second->json_description;
+            }    
+        }
+        //ok we close out profiles dict and the rest
+                
+            f<<"\t}\n"
+        <<"}";
+        f.close();
+        return true;
+    }
+    else
+        return false;
+    
 }
 
 bool Workload::is_static() const

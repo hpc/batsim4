@@ -95,6 +95,6 @@ struct BatsimContext
     double utilization_no_resv = 0;
     bool output_extra_info = true;
     int batsched_PID=0;
-
+       
     ~BatsimContext();
 };

@@ -97,6 +97,12 @@ public:
     std::string to_string();
 
     /**
+     * @brief Writes Workload out to file
+     * @return true if success
+     */
+    bool write_out_workload(const std::string filename,int nb_machines);
+
+    /**
      * @brief Returns whether the workload is static (corresponding to a Batsim input workload/workflow) or not
      * @return Whether the workload is static or not
      */
