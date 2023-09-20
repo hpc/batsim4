@@ -331,13 +331,13 @@ Workload Options:
                                      'shuffle: Will simply shuffle around the submit times amongst the jobs.
                                      'a seed can be put on the end of the string to use for deterministic behavior
                                      'ex:
-                                     '       '--submission-time "200.0:exp:s"'
-                                     '       '--submission-time "100.0:fixed"'
-                                     '       '--submission-time "0.0:fixed"'
-                                     '       '--submission-time "0:200.0:unif"'
-                                     '       '--submission-time "200.0:exp:10"'  <-- 10 is the seed
-                                     '       '--submission-time "0:200.0:unif:20"' <-- 20 is the seed
-                                     '       '--submission-time "shuffle:20" <-- 20 is the seed
+                                     '       '--submission-time-after "200.0:exp:s"'
+                                     '       '--submission-time-after "100.0:fixed"'
+                                     '       '--submission-time-after "0.0:fixed"'
+                                     '       '--submission-time-after "0:200.0:unif"'
+                                     '       '--submission-time-after "200.0:exp:10"'  <-- 10 is the seed
+                                     '       '--submission-time-after "0:200.0:unif:20"' <-- 20 is the seed
+                                     '       '--submission-time-after "shuffle:20" <-- 20 is the seed
                                      [default: false]
   --submission-time-before <STR>     Same as --submission-time-after except it is applied before the copy option.  Can use both at the same time.
                                      [default: false]

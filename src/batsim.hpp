@@ -180,6 +180,7 @@ struct MainArguments
     SubmissionTimes * submission_time_before = nullptr;
     std::string queue_policy = "";
 
+
 };
 
 /**
