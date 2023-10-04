@@ -24,6 +24,9 @@
 #include "workflow.hpp"
 #include "workload.hpp"
 #include "batsim_tools.hpp"
+#include <map>
+
+
 
 /**
  * @brief Stores a high-resolution timestamp
@@ -33,6 +36,9 @@ typedef std::chrono::time_point<std::chrono::high_resolution_clock> my_timestamp
 /**
  * @brief The Batsim context
  */
+
+
+
 struct BatsimContext
 {
     void * zmq_context = nullptr;                   //!< The Zero MQ context
@@ -91,10 +97,14 @@ struct BatsimContext
     int schedule_size = -1;
     int nb_running_jobs = 0;
     int nb_jobs = 0;                                //!< The number of jobs we started with once simulation starts
+    
     double utilization = 0;
     double utilization_no_resv = 0;
     bool output_extra_info = true;
     int batsched_PID=0;
+    batsim_tools::start_from_chkpt start_from_checkpoint;
+    std::multimap<double,batsim_tools::call_me_later_data*,batsim_tools::call_me_later_compare> call_me_laters;
+    batsim_tools::batsim_chkpt_interval batsim_checkpoint_interval;
        
     ~BatsimContext();
 };

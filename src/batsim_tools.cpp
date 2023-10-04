@@ -32,6 +32,7 @@ batsim_tools::memInfo batsim_tools::get_node_memory_usage()
     return meminfo;
 }
 
+
 pid_t batsim_tools::get_batsim_pid()
 {
     return getpid();
@@ -41,6 +42,102 @@ batsim_tools::pid_mem batsim_tools::get_pid_memory_usage()
 {
   return batsim_tools::get_pid_memory_usage(0);
 }
+
+std::string batsim_tools::chkpt_name(int value){
+  if (value == 0)
+    return "_1";
+  else
+    return "_"+std::to_string(value+1);
+}
+
+batsim_tools::job_parts batsim_tools::get_job_parts(std::string job_id)
+{
+        struct batsim_tools::job_parts parts;
+
+ 
+        auto startDollar = job_id.find("$");
+        parts.job_checkpoint = (startDollar != std::string::npos) ? std::stoi(job_id.substr(startDollar+1)) : -1;
+        if (startDollar == std::string::npos)
+            startDollar = job_id.size();
+        //ok we got the checkpoint number, now the resubmit number
+        auto startPound = job_id.find("#");
+        parts.job_resubmit = (startPound != std::string::npos) ? std::stoi(job_id.substr(startPound+1,startPound+1 - startDollar)): -1;
+        if (startPound == std::string::npos)
+            startPound = startDollar;
+        auto startExclamation = job_id.find("!");
+        parts.job_number = (startExclamation != std::string::npos) ? std::stoi(job_id.substr(startExclamation+1,startExclamation+1 - startPound)) : std::stoi(job_id.substr(0,startPound));
+        parts.workload = (startExclamation != std::string::npos) ? job_id.substr(0,startExclamation) : "null";
+
+        parts.str_workload = (parts.workload == "null") ? "" : parts.workload + "!";
+        parts.str_job_number = std::to_string(parts.job_number);
+        parts.str_job_resubmit = (parts.job_resubmit == -1) ? "" : "#"+std::to_string(parts.job_resubmit);
+        parts.str_job_checkpoint = (parts.job_checkpoint == -1) ? "" : "$" + std::to_string(parts.job_checkpoint);
+        
+
+        return parts;
+}
+
+  bool batsim_tools::call_me_later_compare::operator() (double lhs, double rhs) const
+  {
+     return lhs < rhs;
+  }
+
+/*
+batsim_tools::job_parts batsim_tools::get_job_parts(char * id)
+{
+        struct batsim_tools::job_parts parts;
+        std::string job_id = std::string(id);
+ 
+        auto startDollar = job_id.find("$");
+        parts.job_checkpoint = (startDollar != std::string::npos) ? std::stoi(job_id.substr(startDollar+1)) : -1;
+        if (startDollar == std::string::npos)
+            startDollar = job_id.size();
+        //ok we got the checkpoint number, now the resubmit number
+        auto startPound = job_id.find("#");
+        parts.job_resubmit = (startPound != std::string::npos) ? std::stoi(job_id.substr(startPound+1,startPound+1 - startDollar)): -1;
+        if (startPound == std::string::npos)
+            startPound = startDollar;
+        auto startExclamation = job_id.find("!");
+        parts.job_number = (startExclamation != std::string::npos) ? std::stoi(job_id.substr(startExclamation+1,startExclamation+1 - startPound)) : std::stoi(job_id.substr(0,startPound));
+        parts.workload = (startExclamation != std::string::npos) ? job_id.substr(0,startExclamation) : "null";
+
+        parts.str_workload = (parts.workload == "null") ? "" : parts.workload + "!";
+        parts.str_job_number = std::to_string(parts.job_number);
+        parts.str_job_resubmit = (parts.job_resubmit == -1) ? "" : "#"+std::to_string(parts.job_resubmit);
+        parts.str_job_checkpoint = (parts.job_checkpoint == -1) ? "" : "$" + std::to_string(parts.job_checkpoint);
+        
+
+        return parts;
+}
+*/
+
+/*
+batsim_tools::job_parts get_job_parts(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > job_id)
+{
+        struct batsim_tools::job_parts parts;
+
+        auto startDollar = job_id.find("$");
+        parts.job_checkpoint = (startDollar != std::string::npos) ? std::stoi(job_id.substr(startDollar+1)) : -1;
+        if (startDollar == std::string::npos)
+            startDollar = job_id.size();
+        //ok we got the checkpoint number, now the resubmit number
+        auto startPound = job_id.find("#");
+        parts.job_resubmit = (startPound != std::string::npos) ? std::stoi(job_id.substr(startPound+1,startPound+1 - startDollar)): -1;
+        if (startPound == std::string::npos)
+            startPound = startDollar;
+        auto startExclamation = job_id.find("!");
+        parts.job_number = (startExclamation != std::string::npos) ? std::stoi(job_id.substr(startExclamation+1,startExclamation+1 - startPound)) : std::stoi(job_id.substr(0,startPound));
+        parts.workload = (startExclamation != std::string::npos) ? job_id.substr(0,startExclamation) : "null";
+
+        parts.str_workload = (parts.workload == "null") ? "" : parts.workload + "!";
+        parts.str_job_number = std::to_string(parts.job_number);
+        parts.str_job_resubmit = (parts.job_resubmit == -1) ? "" : "#"+std::to_string(parts.job_resubmit);
+        parts.str_job_checkpoint = (parts.job_checkpoint == -1) ? "" : "$" + std::to_string(parts.job_checkpoint);
+        
+
+        return parts;
+}
+*/
 
 batsim_tools::pid_mem batsim_tools::get_pid_memory_usage(int pid)
 {

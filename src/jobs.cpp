@@ -5,6 +5,9 @@
 
 #include "jobs.hpp"
 #include "workload.hpp"
+//#include "batsim_tools.hpp"
+#include "context.hpp"
+
 
 #include <string>
 #include <iostream>
@@ -24,9 +27,12 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "profiles.hpp"
+#include "batsim_tools.hpp"
 
 using namespace std;
 using namespace rapidjson;
+
+//namespace batsim_tools{struct job_parts get_job_parts(char * id);}
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(jobs, "jobs"); //!< Logging
 
@@ -226,7 +232,7 @@ void Jobs::set_workload(Workload *workload)
     _workload = workload;
 }
 
-void Jobs::load_from_json(const rapidjson::Document &doc, const std::string &filename)
+void Jobs::load_from_json(const rapidjson::Document &doc, const std::string &filename,int nb_checkpoint)
 {
     string error_prefix = "Invalid JSON file '" + filename + "'";
 
@@ -239,7 +245,7 @@ void Jobs::load_from_json(const rapidjson::Document &doc, const std::string &fil
     {
         const Value & job_json_description = jobs[i];
 
-        auto j = Job::from_json(job_json_description, _workload, error_prefix);
+        auto j = Job::from_json(job_json_description, _workload, error_prefix,nb_checkpoint);
 
         xbt_assert(!exists(j->id), "%s: duplication of job id '%s'",
                    error_prefix.c_str(), j->id.to_string().c_str());
@@ -423,6 +429,8 @@ Job::~Job()
     if (task != nullptr)
     {
         delete task;
+        delete checkpoint_job_data;
+        checkpoint_job_data = nullptr;
         task = nullptr;
     }
 }
@@ -453,13 +461,14 @@ std::string Job::to_json_desc(rapidjson::Document * doc)
 
   return std::string( buffer.GetString() );
 }
+
 // Do NOT remove namespaces in the arguments (to avoid doxygen warnings)
 JobPtr Job::from_json(const rapidjson::Value & json_desc,
                      Workload * workload,
-                     const std::string & error_prefix)
+                     const std::string & error_prefix,
+                     int nb_checkpoint)
 {
     //get 
-    
     
     // Create and initialize with default values
     auto j = std::make_shared<Job>();
@@ -474,18 +483,34 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     // Get job id and create a JobIdentifier
     xbt_assert(json_desc.HasMember("id"), "%s: one job has no 'id' field", error_prefix.c_str());
     xbt_assert(json_desc["id"].IsString() or json_desc["id"].IsInt(), "%s: on job id field is invalid, it should be a string or an integer", error_prefix.c_str());
-    string job_id_str;
+    
+    std::string job_id_str;
+    struct batsim_tools::job_parts parts ;
+    
     int job_id_int;
     if (json_desc["id"].IsString())
     {
-        job_id_str = json_desc["id"].GetString();
-
+        job_id_str = std::string(json_desc["id"].GetString());
+        
+        parts = batsim_tools::get_job_parts(job_id_str);
+        job_id_int = parts.job_number;
     }
     else if (json_desc["id"].IsInt())
     {
-        job_id_str = to_string(json_desc["id"].GetInt());
+        job_id_str = std::to_string(json_desc["id"].GetInt());
+        parts = batsim_tools::get_job_parts(job_id_str);
         job_id_int = json_desc["id"].GetInt();
     }
+    if (nb_checkpoint == -1)  // ok there is no str_job_checkpoint
+        job_id_str = parts.str_workload + 
+                     parts.str_job_number +
+                     parts.str_job_resubmit +
+                     parts.str_job_checkpoint;
+    else
+        job_id_str = parts.str_workload +
+                     parts.str_job_number +
+                     parts.str_job_resubmit +
+                     "$" + std::to_string(nb_checkpoint);
 
     if (job_id_str.find(workload->name) == std::string::npos)
     {
@@ -496,6 +521,37 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     {
         j->id = JobIdentifier(job_id_str);
     }
+    //CCU-LANL Additions
+    //if we are starting from a checkpoint lets add things to a job's attributes now
+    if (workload->context->start_from_checkpoint.started_from_checkpoint)
+    {
+        j->checkpoint_job_data = new batsim_tools::checkpoint_job_data();
+        xbt_assert(json_desc.HasMember("allocation"), "%s: job '%s' has no 'allocation' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->allocation = json_desc["allocation"].GetString();
+        
+        xbt_assert(json_desc.HasMember("progress"), "%s: job '%s' has no 'progress' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->progress = json_desc["progress"].GetDouble();
+
+        xbt_assert(json_desc.HasMember("state"), "%s: job '%s' has no 'state' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->state = json_desc["state"].GetInt();
+
+        xbt_assert(json_desc.HasMember("metadata"), "%s: job '%s' has no 'metadata' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->metadata = json_desc["metadata"].GetString();
+
+        xbt_assert(json_desc.HasMember("batsim_metadata"), "%s: job '%s' has no 'batsim_metadata' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->batsim_metadata = json_desc["batsim_metadata"].GetString();
+
+        xbt_assert(json_desc.HasMember("jitter"), "%s: job '%s' has no 'jitter' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->jitter = json_desc["jitter"].GetString();
+    }
+
+
 
     // Get submission time
     xbt_assert(json_desc.HasMember("subtime"), "%s: job '%s' has no 'subtime' field",
@@ -666,28 +722,31 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 j->read_time = pf * j->read_time;
             }
                 
-                //if we need to compute the optimal checkpointing, do it here
-                
-                if (workload->_compute_checkpointing)
+            //if we need to compute the optimal checkpointing, do it here
+            
+            if (workload->_compute_checkpointing)
+            {
+                //it is computed using MTBF or SMTBF, make sure one of them is set
+                xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
+                //prioritize the SMTBF.  If this is set then make checkpointing calculation based on it, else make it off of MTBF
+                if (workload->_SMTBF !=-1.0)
                 {
-                    //it is computed using MTBF or SMTBF, make sure one of them is set
-                    xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
-                    //prioritize the SMTBF.  If this is set then make checkpointing calculation based on it, else make it off of MTBF
-                    if (workload->_SMTBF !=-1.0)
-                    {
-                        double M = (workload->_num_machines * workload->_SMTBF)/j->requested_nb_res;
-                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time*2.0 * M))-j->dump_time;
-                    }
-                    else if (workload->_MTBF !=-1.0)
-                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time * 2.0 * workload->_MTBF))-j->dump_time;
-                    xbt_assert(j->checkpoint_interval > 0,"Error with %s checkpoint_interval is computed as negative.  This indicates a problem with the dump_time vs the (S)MTBF",j->id.job_name().c_str());
+                    double M = (workload->_num_machines * workload->_SMTBF)/j->requested_nb_res;
+                    j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time*2.0 * M))-j->dump_time;
                 }
-                if (workload->_global_checkpointing_interval != -1.0){
-                    j->checkpoint_interval = (workload->_global_checkpointing_interval)-j->dump_time;
-                }
+                else if (workload->_MTBF !=-1.0)
+                    j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time * 2.0 * workload->_MTBF))-j->dump_time;
+                xbt_assert(j->checkpoint_interval > 0,"Error with %s checkpoint_interval is computed as negative.  This indicates a problem with the dump_time vs the (S)MTBF",j->id.job_name().c_str());
+            }
+            if (workload->_global_checkpointing_interval != -1.0){
+                j->checkpoint_interval = (workload->_global_checkpointing_interval)-j->dump_time;
+            }
 
-                //get the job's profile data
-                DelayProfileData * data =static_cast<DelayProfileData *>(j->profile->data);
+            //get the job's profile data
+            DelayProfileData * data =static_cast<DelayProfileData *>(j->profile->data);
+            //if delay has an original_delay (!=1.0) then it is not safe to change the times
+            if (data->original_delay == -1.0)
+            {
                 //delay will be changing since we are checkpointing
                 double delay = data->delay;
                 int subtract = 0;
@@ -705,6 +764,9 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 j->profile->json_description = Job::to_json_desc(& profile_doc);
                 j->profile->data = data;
                 XBT_INFO("Total delay %f",delay);
+            }
+            
+            
             //The job object now has the correct values, but its json description does not.  Set these values
             if (json_desc_copy.HasMember("checkpoint_interval"))
                 json_desc_copy["checkpoint_interval"].SetDouble(j->checkpoint_interval);
@@ -714,10 +776,19 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
             if (json_desc_copy.HasMember("dumptime"))
                 json_desc_copy["dumptime"].SetDouble(j->dump_time);
             if (json_desc_copy.HasMember("readtime"))
-                json_desc_copy["readtime"].SetDouble(j->read_time);
+                    json_desc_copy["readtime"].SetDouble(j->read_time);
             
             
         }
+        //do this regardless of whether checkpointing is on
+        if (!json_desc_copy.HasMember("purpose"))
+            {
+                json_desc_copy.AddMember("purpose",Value().SetString(j->purpose.c_str(),json_desc_copy.GetAllocator()),json_desc_copy.GetAllocator()); //add purpose 
+            }
+        if (!json_desc_copy.HasMember("start"))
+            {
+                json_desc_copy.AddMember("start",Value().SetDouble(j->start),json_desc_copy.GetAllocator());
+            }
         
 
 
@@ -752,6 +823,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 j->profile->data = data;
             }
         }
+        
 
         //if checkpointing is on, do all of the following
         if (workload->_checkpointing_on)
@@ -773,29 +845,36 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 j->read_time = pf * j->read_time;
             }
                 
-                //if we need to compute the optimal checkpointing, do it here
-                
-                if (workload->_compute_checkpointing)
+            //if we need to compute the optimal checkpointing, do it here
+            
+            if (workload->_compute_checkpointing)
+            {
+                //it is computed using MTBF or SMTBF, make sure one of them is set
+                xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
+                //prioritize the SMTBF.  If this is set then make checkpointing calculation based on it, else make it off of MTBF
+                if (workload->_SMTBF !=-1.0)
                 {
-                    //it is computed using MTBF or SMTBF, make sure one of them is set
-                    xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
-                    //prioritize the SMTBF.  If this is set then make checkpointing calculation based on it, else make it off of MTBF
-                    if (workload->_SMTBF !=-1.0)
-                    {
-                        double M = (workload->_num_machines * workload->_SMTBF)/j->requested_nb_res;
-                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time*2.0 * M))-j->dump_time;
-                    }
-                    else if (workload->_MTBF !=-1.0)
-                        j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time * 2.0 * workload->_MTBF))-j->dump_time;
-                    xbt_assert(j->checkpoint_interval > 0,"Error with %s checkpoint_interval is computed as negative.  This indicates a problem with the dump_time vs the (S)MTBF",j->id.job_name().c_str());
+                    double M = (workload->_num_machines * workload->_SMTBF)/j->requested_nb_res;
+                    j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time*2.0 * M))-j->dump_time;
                 }
-                if (workload->_global_checkpointing_interval != -1.0){
-                    j->checkpoint_interval = (workload->_global_checkpointing_interval)-j->dump_time;
-                    XBT_INFO("global job %s  checkpoint_interval:%f",j->id.job_name().c_str(),j->checkpoint_interval);
-                }
-                    XBT_INFO("job %s  checkpoint_interval:%f",j->id.job_name().c_str(),j->checkpoint_interval);
-                //get the job's profile data
-                ParallelHomogeneousProfileData * data =static_cast<ParallelHomogeneousProfileData *>(j->profile->data);
+                else if (workload->_MTBF !=-1.0)
+                    j->checkpoint_interval = (workload->_compute_checkpointing_error * sqrt(j->dump_time * 2.0 * workload->_MTBF))-j->dump_time;
+                xbt_assert(j->checkpoint_interval > 0,"Error with %s checkpoint_interval is computed as negative.  This indicates a problem with the dump_time vs the (S)MTBF",j->id.job_name().c_str());
+            }
+
+            //global checkpointing trumps any previous stuff
+            if (workload->_global_checkpointing_interval != -1.0){
+                j->checkpoint_interval = (workload->_global_checkpointing_interval)-j->dump_time;
+                XBT_INFO("global job %s  checkpoint_interval:%f",j->id.job_name().c_str(),j->checkpoint_interval);
+            }
+
+            //ok here we set the new times with checkpointing if we need to
+            XBT_INFO("job %s  checkpoint_interval:%f",j->id.job_name().c_str(),j->checkpoint_interval);
+            //get the job's profile data
+            ParallelHomogeneousProfileData * data =static_cast<ParallelHomogeneousProfileData *>(j->profile->data);
+            //only change times if original_cpu is not set (not a start-from-checkpoint)
+            if (data->original_cpu == -1.0)
+            {
                 //delay will be changing since we are checkpointing
                 double cpu = data->cpu;
                 int subtract = 0;
@@ -814,6 +893,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 j->profile->json_description = Job::to_json_desc(& profile_doc);
                 j->profile->data = data;
                 XBT_INFO("Total delay %f, Total cpu %f",delay,delay * one_second);
+            }
             //The job object now has the correct values, but its json description does not.  Set these values
             if (json_desc_copy.HasMember("checkpoint_interval"))
                 json_desc_copy["checkpoint_interval"].SetDouble(j->checkpoint_interval);
@@ -827,6 +907,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
             
             
         }
+        //do this regardless of whether checkpointing is on
         if (!json_desc_copy.HasMember("purpose"))
             {
                 json_desc_copy.AddMember("purpose",Value().SetString(j->purpose.c_str(),json_desc_copy.GetAllocator()),json_desc_copy.GetAllocator()); //add purpose 
@@ -923,7 +1004,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
 // Do NOT remove namespaces in the arguments (to avoid doxygen warnings)
 JobPtr Job::from_json(const std::string & json_str,
                      Workload * workload,
-                     const std::string & error_prefix)
+                     const std::string & error_prefix,
+                     int nb_checkpoint)
 {
     Document doc;
     doc.Parse(json_str.c_str());

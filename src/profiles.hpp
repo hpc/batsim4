@@ -49,6 +49,7 @@ struct Profile
     void * data; //!< The associated data
     std::string json_description; //!< The JSON description of the profile
     std::string name; //!< the profile unique name
+    bool real=true;
     int return_code = 0;  //!< The return code of this profile's execution (SUCCESS == 0)
 
     /**
@@ -105,6 +106,7 @@ struct ParallelProfileData
 
     //CCU-LANL Additions
     double * real_cpu = nullptr; //!< Amount of cpu (forward work)
+    double * original_cpu = nullptr;
 };
 
 /**
@@ -112,11 +114,13 @@ struct ParallelProfileData
  */
 struct ParallelHomogeneousProfileData
 {
-    double cpu; //!< The computation amount on each node including checkpointing times
-    double com; //!< The communication amount between each pair of nodes
+    double cpu; //!< The computation amount on each node including job-checkpoints work
+    double com; //!< The communication amount on each node, hasn't been used yet
 
     //CCU-LANL Additions
-    double real_cpu=0;  //!< The computation amount on each node (forward work)
+    double real_cpu=0; //!< The computation amount on each node (forward work)
+    double original_cpu=-1.0;  //!< for use with checkpointing-batsim.  cpu and real_cpu correspond to flops for this simulation.
+                             //!< while original_cpu corresponds to the original real_cpu, not changed by batsim-checkpoints or job-checkpoints
 };
 
 /**
@@ -124,21 +128,25 @@ struct ParallelHomogeneousProfileData
  */
 struct ParallelHomogeneousTotalAmountProfileData
 {
-    double cpu; //!< The computation amount to spread over the nodes including checkpointing times
-    double com; //!< The communication amount to spread over each pair of nodes
+    double cpu; //!< The computation amount to spread over the nodes including job-checkpoints times
+    double com; //!< The communication amount to spread over each pair of nodes, hasn't been used yet
 
     //CCU-LANL Additions
     double real_cpu=0; //!< The computation amount to spread over the nodes (forward work)
+    double original_cpu=-1.0;  //!< for use with checkpointing-batsim.  cpu and real_cpu correspond to flops for this simulation.
+                             //!< while original_cpu corresponds to the original real_cpu, not changed by batsim-checkpoints or job-checkpoints
 };
 /**
  * @brief The data associated to DELAY profiles
  */
 struct DelayProfileData
 {
-    double delay; //!< The time amount, in seconds, that the job is supposed to take
+    double delay; //!< The time amount, in seconds, that the job is supposed to take. when checkpointing_on includes job-checkpoints time
     
     //CCU-LANL Additions
-    double real_delay=0; //!< The time amount that is the actual amount of forward work that is supposed to take place [checkpointing_on]
+    double real_delay=0; //!< The time amount that is the actual amount of forward work that is supposed to take place when checkpointing_on
+    double original_delay=-1.0; //!< for use with checkpointing-batsim.  delay and real_delay correspond to times for this simulation.
+                             //!< while original_delay corresponds to the original real_delay, not changed by batsim-checkpoints or job-checkpoints
 };
 
 /**
@@ -237,7 +245,7 @@ public:
      * @param[in] doc The JSON document
      * @param[in] filename The name of the file from which the JSON document has been created (debug purpose)
      */
-    void load_from_json(const rapidjson::Document & doc, const std::string & filename);
+    void load_from_json(const rapidjson::Document & doc, const std::string & filename,int nb_checkpoint=-1);
 
     /**
      * @brief Accesses one profile thanks to its name

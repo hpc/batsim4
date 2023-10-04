@@ -75,10 +75,10 @@ void prepare_batsim_outputs(BatsimContext * context)
             context->pstate_tracer.add_pstate_change(simgrid::s4u::Engine::get_clock(), range, pstate);
         }
     }
-
     context->jobs_tracer.initialize(context,
                                     context->export_prefix + "_jobs.csv",
-                                    context->export_prefix + "_schedule.csv");
+                                    context->export_prefix + "_schedule.csv",
+                                    context->start_from_checkpoint.started_from_checkpoint);
 }
 
 void finalize_batsim_outputs(BatsimContext * context)
@@ -113,13 +113,15 @@ void finalize_batsim_outputs(BatsimContext * context)
 }
 
 
-WriteBuffer::WriteBuffer(const std::string & filename, size_t buffer_size)
+WriteBuffer::WriteBuffer(const std::string & filename, size_t buffer_size,bool append)
     : buffer_size(buffer_size)
 {
     xbt_assert(buffer_size > 0, "Invalid buffer size (%zu)", buffer_size);
     buffer = new char[buffer_size];
-
-    f.open(filename, ios_base::trunc);
+    if (append)
+        f.open(filename,ios_base::app);
+    else
+        f.open(filename, ios_base::trunc);
     xbt_assert(f.is_open(), "Cannot write file '%s'", filename.c_str());
 }
 
@@ -965,10 +967,11 @@ JobsTracer::~JobsTracer()
 
 void JobsTracer::initialize(BatsimContext *context,
                        const string & jobs_filename,
-                       const string & schedule_filename)
+                       const string & schedule_filename,
+                       bool append)
 {
     xbt_assert(_wbuf == nullptr, "Double call of JobsTracer::initialize");
-    _wbuf = new WriteBuffer(jobs_filename);
+    _wbuf = new WriteBuffer(jobs_filename,64*1024,append);
     _context = context;
     _schedule_filename = schedule_filename;
 

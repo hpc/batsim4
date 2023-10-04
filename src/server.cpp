@@ -21,7 +21,7 @@
 #include "ipp.hpp"
 #include "network.hpp"
 #include "jobs_execution.hpp"
-#include "batsim_tools.hpp"
+//#include "batsim_tools.hpp"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(server, "server"); //!< Logging
 namespace r = rapidjson;
@@ -284,6 +284,8 @@ void server_on_job_completed(ServerData * data,
         if (f.is_open())
         {
             int actually_completed_jobs = data->nb_completed_jobs - data->nb_killed_jobs;
+            data->context->start_from_checkpoint.nb_actually_completed = actually_completed_jobs
+                 + (data->context->start_from_checkpoint.nb_previously_completed);
             double percent = (double(actually_completed_jobs)/double(data->context->nb_jobs)) *100.0;
             f<<std::fixed<<std::setprecision(10)
                 <<actually_completed_jobs<<","<<data->context->nb_jobs<<","<<std::setprecision(2)<<percent
@@ -687,12 +689,12 @@ void server_on_killing_done(ServerData * data,
     // manage job Id list
     for (batsim_tools::Kill_Message * job_msg : message->jobs_msgs)
     {
-        job_ids_str.push_back(job_msg->id.to_string());
+        job_ids_str.push_back((*job_msg->id).to_string());
 
         // store job progress from BatTask tree in str
         //jobs_progress_str[job_id.to_string()] = message->jobs_progress[job_id];
 
-        const auto job = data->context->workloads.job_at(job_msg->id);
+        const auto job = data->context->workloads.job_at(*(job_msg->id));
         if ( job->state == JobState::JOB_STATE_COMPLETED_KILLED)
         {
             data->nb_running_jobs--;
@@ -703,7 +705,7 @@ void server_on_killing_done(ServerData * data,
 
             xbt_assert(data->nb_completed_jobs + data->nb_running_jobs <= data->nb_submitted_jobs , "inconsistency: nb_completed_jobs + nb_running_jobs > nb_submitted_jobs");
 
-            really_killed_job_ids_str.push_back(job_msg->id.to_string());
+            really_killed_job_ids_str.push_back((*job_msg->id).to_string());
 
             // also add a job complete message for the jobs that have really been
             // killed
@@ -959,10 +961,10 @@ void server_on_kill_jobs(ServerData * data,
     for (batsim_tools::Kill_Message *  job_msg : message->jobs_msgs)
     {
         
-        xbt_assert(data->context->workloads.job_is_registered(job_msg->id),
-                   "Trying to kill job '%s' but it does not exist.", job_msg->id.to_cstring());
+        xbt_assert(data->context->workloads.job_is_registered(*job_msg->id),
+                   "Trying to kill job '%s' but it does not exist.", (*job_msg->id).to_cstring());
 
-        auto job = data->context->workloads.job_at(job_msg->id);
+        auto job = data->context->workloads.job_at(*job_msg->id);
 
         // Let's discard jobs whose kill has already been requested
         if (!job->kill_requested)
@@ -976,7 +978,7 @@ void server_on_kill_jobs(ServerData * data,
             // Let's check the job state
             xbt_assert(job->state == JobState::JOB_STATE_RUNNING || job->is_complete(),
                        "Invalid KILL_JOB: job_id '%s' refers to a job not being executed nor completed.",
-                       job_msg->id.to_cstring());
+                       (*job_msg->id).to_cstring());
 
             // Let's mark that the job kill has been requested
             job->kill_requested = true;
@@ -1011,6 +1013,12 @@ void server_on_call_me_later(ServerData * data,
                                 data->context->machines.master_machine()->host,
                                 waiter_process, message->target_time,data, message->id, message->forWhat);
     ++data->nb_waiters;
+    batsim_tools::call_me_later_data* cml_data = new batsim_tools::call_me_later_data();
+    cml_data->date_received = simgrid::s4u::Engine::get_clock();
+    cml_data->target_time = message->target_time;
+    cml_data->forWhat = static_cast<batsim_tools::call_me_later_types>(message->forWhat);
+    cml_data->id = message->id;
+    data->context->call_me_laters.insert(std::pair(message->target_time,cml_data));
 }
 
 void server_on_execute_job(ServerData * data,

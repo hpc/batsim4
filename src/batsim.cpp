@@ -59,7 +59,7 @@
 #include "server.hpp"
 #include "workload.hpp"
 #include "workflow.hpp"
-#include "batsim_tools.hpp"
+
 
 #include "docopt/docopt.h"
 
@@ -243,15 +243,20 @@ Output options:
 Checkpoint Batsim options:
   --checkpoint-batsim-interval <string>     Will checkpoint batsim at <string> regular intervals
                                             Where <string> is in format:
-                                            "real|simulated:days-HH:MM:SS"
+                                            "(real|simulated):days-HH:MM:SS[:keep]"
                                             'real' prepended will interpret the interval to be in real time
                                             'simulated' prepended will interpret the interval to be in simulated time
+                                            optional :keep will set the amount of checkpoints to keep.  --checkpoint-batsim-keep trumps this
                                             False turns off
                                             [default: False]
+  --checkpoint-batsim-keep <int>     The amount of checkpoints to keep.  Trumps --checkpoint-batsim-interval's keep
+                                     [default: -1]
+  --checkpoint-batsim-signal <int>   The signal number to use for signal driven checkpointing.
+                                     [default: -1]
   --start-from-checkpoint <int>      Will start batsim from checkpoint #.
                                      Numbers go back in time...so 1 is the latest, 2 is the second latest
-                                     Currently the only valid number is 1, the latest
                                      [default: -1]
+  
 
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
@@ -498,12 +503,43 @@ Reservation Options:
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
    main_args.seed_repair_time = args["--seed-repair-times"].asBool();
    main_args.MTTR = atof(args["--MTTR"].asString().c_str());
-   main_args.checkpoint_batsim_interval = args["--checkpoint-batsim-interval"].asString();
+   main_args.chkpt_interval.raw = args["--checkpoint-batsim-interval"].asString();
+   main_args.chkpt_interval.keep = args["--checkpoint-batsim-keep"].asLong();
    main_args.start_from_checkpoint = args["--start-from-checkpoint"].asLong();
+   main_args.checkpoint_signal = args["--checkpoint-batsim-signal"].asLong();
    main_args.queue_policy = args["--queue-policy"].asString();
    std::string copy = args["--copy"].asString();
    std::string submission_time_after = args["--submission-time-after"].asString();
    std::string submission_time_before = args["--submission-time-before"].asString();
+
+
+   if (main_args.chkpt_interval.raw != "False")
+   {
+        const boost::regex r(R"(^(real|simulated):([0-9]+)[-]([0-9]{2}):([0-9]{2}):([0-9]{2})(?:$|(?:[:]([0-9]+))))");
+        boost::smatch sm;
+        if (boost::regex_search(main_args.chkpt_interval.raw,sm,r))
+        {
+            main_args.chkpt_interval.type = sm[1];
+            main_args.chkpt_interval.days = std::stoi(sm[2]);
+            main_args.chkpt_interval.hours = std::stoi(sm[3]);
+            main_args.chkpt_interval.minutes = std::stoi(sm[4]);
+            main_args.chkpt_interval.seconds = std::stoi(sm[5]);
+            if (sm[6]!="" && main_args.chkpt_interval.keep == -1)//keep will already be set if explicitly set with --checkpoint-batsim-keep
+                                                                 //and that takes precedence, otherwise it will equal -1 and we can overwrite it
+                main_args.chkpt_interval.keep = std::stoi(sm[6]);
+            main_args.chkpt_interval.total_seconds = main_args.chkpt_interval.seconds + 
+                                                    main_args.chkpt_interval.minutes*60 +
+                                                    main_args.chkpt_interval.hours*3600 + 
+                                                    main_args.chkpt_interval.days*24*3600;
+        }
+        else
+            throw runtime_error("--checkpoint-batsim-interval != False, but not valid time string: " +main_args.chkpt_interval.raw);
+   }
+   //ok we need to keep at least 1 so if it hasn't been set, then set it to 1
+   if (main_args.chkpt_interval.keep == -1)
+      main_args.chkpt_interval.keep = 1;
+   
+   
    std::string submission_time;
    std::string ourRegExString;
    std::string decimal=R"((?:\d+(?:\.\d*)?|\.\d+))";
@@ -1058,12 +1094,19 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
         Workload * workload = Workload::new_static_workload(desc.name,
                                                              desc.filename,
                                                              &main_args,
+                                                             context,
                                                              context->machines[0]->speed
                                                             );
 
         
         int nb_machines_in_workload = -1;
-        workload->load_from_json(desc.filename, nb_machines_in_workload);
+        if (context->start_from_checkpoint.started_from_checkpoint)
+            workload->load_from_json_chkpt(desc.filename, nb_machines_in_workload);
+        else
+        {
+            workload->load_from_json(desc.filename, nb_machines_in_workload);
+            context->start_from_checkpoint.nb_original_jobs = workload->jobs->nb_jobs();
+        }
         context->nb_jobs = workload->jobs->nb_jobs();
         max_nb_machines_in_workloads = std::max(max_nb_machines_in_workloads, nb_machines_in_workload);
 
@@ -1073,7 +1116,7 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
     // Let's create the workflows
     for (const MainArguments::WorkflowDescription & desc : main_args.workflow_descriptions)
     {
-        Workload * workload = Workload::new_static_workload(desc.workload_name, desc.filename,nullptr);
+        Workload * workload = Workload::new_static_workload(desc.workload_name, desc.filename,nullptr,context);
         workload->jobs = new Jobs;
         workload->profiles = new Profiles;
         workload->jobs->set_workload(workload);
@@ -1282,7 +1325,6 @@ int main(int argc, char * argv[])
 
 
     // Let's load the workloads and workflows
-    
     load_workloads_and_workflows(main_args, &context, max_nb_machines_to_use);
 
     // Let's load the eventLists
@@ -1403,6 +1445,9 @@ void set_configuration(BatsimContext *context,
     context->trace_machine_states = main_args.enable_machine_state_tracing;
     context->simulation_start_time = chrono::high_resolution_clock::now();
     context->terminate_with_last_workflow = main_args.terminate_with_last_workflow;
+    context->batsim_checkpoint_interval = main_args.chkpt_interval;
+    context->start_from_checkpoint.started_from_checkpoint= (main_args.start_from_checkpoint == -1) ? false : true;
+    context->start_from_checkpoint.nb_folder = main_args.start_from_checkpoint;
 
     // **************************************************************************************
     // Let's write the json object holding configuration information to send to the scheduler
@@ -1452,9 +1497,29 @@ void set_configuration(BatsimContext *context,
     context->config_json.AddMember("seed-repair-time",Value().SetBool(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
     context->config_json.AddMember("queue-policy",Value().SetString(main_args.queue_policy.c_str(),alloc),alloc);
-    context->config_json.AddMember("checkpoint-batsim-interval",Value().SetString(main_args.checkpoint_batsim_interval.c_str(),alloc),alloc);
     
+    Value chkpt_json(rapidjson::kObjectType);
+    chkpt_json.AddMember("raw",Value().SetString(main_args.chkpt_interval.raw.c_str(),alloc),alloc);
+    chkpt_json.AddMember("type",Value().SetString(main_args.chkpt_interval.type.c_str(),alloc),alloc);
+    chkpt_json.AddMember("days",Value().SetInt(main_args.chkpt_interval.days),alloc);
+    chkpt_json.AddMember("hours",Value().SetInt(main_args.chkpt_interval.hours),alloc);
+    chkpt_json.AddMember("minutes",Value().SetInt(main_args.chkpt_interval.minutes),alloc);
+    chkpt_json.AddMember("seconds",Value().SetInt(main_args.chkpt_interval.seconds),alloc);
+    chkpt_json.AddMember("total_seconds",Value().SetInt(main_args.chkpt_interval.total_seconds),alloc);
+    chkpt_json.AddMember("keep",Value().SetInt(main_args.chkpt_interval.keep),alloc);
 
+    context->config_json.AddMember("checkpoint-batsim-interval",chkpt_json,alloc); 
+
+    Value start_from_checkpoint(rapidjson::kObjectType);
+    start_from_checkpoint.AddMember("nb_folder",Value().SetInt((int)main_args.start_from_checkpoint),alloc);
+    start_from_checkpoint.AddMember("nb_checkpoint",Value().SetInt((int)context->start_from_checkpoint.nb_checkpoint),alloc);
+    start_from_checkpoint.AddMember("nb_previously_completed",Value().SetInt((int)context->start_from_checkpoint.nb_previously_completed),alloc);
+    start_from_checkpoint.AddMember("nb_original_jobs",Value().SetInt((int)context->start_from_checkpoint.nb_original_jobs),alloc);
+    start_from_checkpoint.AddMember("started_from_checkpoint",Value().SetBool(context->start_from_checkpoint.started_from_checkpoint),alloc);
+
+    context->config_json.AddMember("start-from-checkpoint",start_from_checkpoint,alloc); 
+
+    context->config_json.AddMember("checkpoint-signal",Value().SetInt((int)main_args.checkpoint_signal),alloc); 
 
 
     // others

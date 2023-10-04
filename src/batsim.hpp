@@ -5,8 +5,8 @@
 #include <map>
 #include <vector>
 #include "batsim_tools.hpp"
-
 #include <rapidjson/document.h>
+
 
 struct BatsimContext;
 
@@ -174,8 +174,10 @@ struct MainArguments
     int scheduler_queue_depth = -1;
     bool subtract_progress_from_walltime = false;
     std::map<int,double>* reservations_start = nullptr;
-    std::string checkpoint_batsim_interval = "False";
+    batsim_tools::batsim_chkpt_interval chkpt_interval;
     int start_from_checkpoint = -1;
+    int checkpoint_signal=35;
+
 
     Copies * copy = nullptr;
     SubmissionTimes * submission_time_after= nullptr;

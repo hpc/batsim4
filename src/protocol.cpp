@@ -55,7 +55,6 @@ void JsonProtocolWriter::append_requested_call(double date,int id, int forWhat)
     event.AddMember("timestamp", Value().SetDouble(date), _alloc);
     event.AddMember("type", Value().SetString("REQUESTED_CALL"), _alloc);
     event.AddMember("data", data, _alloc);
-
     _events.PushBack(event, _alloc);
 }
 //CCU-LANL Additions added job information to send over to scheduler
@@ -307,8 +306,21 @@ void JsonProtocolWriter::append_job_submitted(const string & job_id,
         Document job_description_doc;
         job_description_doc.Parse(job_json_description.c_str());
         xbt_assert(!job_description_doc.HasParseError(), "JSON parse error");
+        Value & job_data = Value().CopyFrom(job_description_doc,_alloc);
+        batsim_tools::job_parts parts = batsim_tools::get_job_parts(job_id);
+        JobPtr job = _context->workloads.at(parts.workload)->jobs->at(JobIdentifier( job_id ));
+        
 
-        data.AddMember("job", Value().CopyFrom(job_description_doc, _alloc), _alloc);
+        Value checkpoint_job_data(rapidjson::kObjectType);
+        checkpoint_job_data.AddMember("allocation",Value().SetString(job->checkpoint_job_data->allocation.c_str(),_alloc),_alloc);
+        checkpoint_job_data.AddMember("consumed_energy",Value().SetString(batsim_tools::to_string<double>(double(job->checkpoint_job_data->consumed_energy)).c_str(),_alloc),_alloc);
+        checkpoint_job_data.AddMember("jitter",Value().SetString(job->checkpoint_job_data->jitter.c_str(),_alloc),_alloc);
+        checkpoint_job_data.AddMember("progress",Value().SetString(batsim_tools::to_string(job->checkpoint_job_data->progress).c_str(),_alloc),_alloc);
+        checkpoint_job_data.AddMember("state",Value().SetInt(job->checkpoint_job_data->state),_alloc);
+        job_data.AddMember("checkpoint_job_data",checkpoint_job_data,_alloc);
+
+        data.AddMember("job", job_data, _alloc);
+
 
         if (_context->submission_forward_profiles)
         {
@@ -1483,13 +1495,50 @@ void JsonProtocolReader::handle_notify(int event_number,
     {
       std::string prefix = context->export_prefix;
       prefix = prefix.substr(0,prefix.rfind("/"));
-      std::string checkpoint_dir = prefix+"/checkpoint";
+      std::string checkpoint_base = prefix+"/checkpoint";
+      std::string checkpoint_dir=checkpoint_base+"_1";
+      batsim_tools::batsim_chkpt_interval &interval = context->batsim_checkpoint_interval;
+      //create our directories
+       if (!fs::exists(fs::symlink_status(checkpoint_base+"_latest")))
+      {
+        fs::create_directory_symlink(checkpoint_dir,checkpoint_base+"_latest");
+      }
+      
+      //if we are keeping folders of previous checkpoints then we need to move the directories around
+      if (interval.keep > 1)
+      {
+        interval.nb_checkpoints++;
+        int start = interval.nb_checkpoints -1;
+        std::string from;
+        std::string to;
+        //if greater than our first
+        if (start > 0)
+        {
+          if (start >= interval.keep)
+          {
+            //ok we have all the folders, put start at the ending folder
+            start = interval.keep -1;
+          }
+          for (int i=start;i>0;i--)
+          {
+            //first make sure the directory we are moving to is not there
+            fs::remove_all(checkpoint_base+batsim_tools::chkpt_name(i));
+            from = checkpoint_base+batsim_tools::chkpt_name(i-1);
+            to = checkpoint_base+batsim_tools::chkpt_name(i);
+            fs::rename(from,to);
+          }
+        }
+      }
+      //we keep moving checkpoint_1 down the line, so we need to keep creating checkpoint_1
       fs::create_directories(checkpoint_dir);
+     
+      //flush the out_jobs.csv file before saving it
       context->jobs_tracer.flush();
       if (fs::exists(prefix+"/out_jobs.csv"))
         fs::copy_file(prefix+"/out_jobs.csv",checkpoint_dir+"/out_jobs.csv",fs::copy_options::overwrite_existing);
       Workload * w0 = context->workloads["w0"];
-      w0->write_out_workload(checkpoint_dir+"/workload.json",context->machines.nb_machines());
+      w0->write_out_batsim_checkpoint(checkpoint_dir);
+      
       
         auto * message = new CallMeLaterMessage;
 
@@ -1756,7 +1805,7 @@ void JsonProtocolReader::handle_kill_job(int event_number,
         batsim_tools::Kill_Message* msg = new batsim_tools::Kill_Message;
         msg->simple_id = job_msg["id"].GetString();
         msg->forWhat = static_cast<batsim_tools::KILL_TYPES>(job_msg["forWhat"].GetInt());
-        msg->id = JobIdentifier(msg->simple_id);
+        msg->id = new JobIdentifier(msg->simple_id);
         message->jobs_msgs[i] = msg;
     }
 

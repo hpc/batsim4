@@ -45,7 +45,9 @@ public:
      * @param[in] buffer_size The size of the buffer (in bytes).
      */
     explicit WriteBuffer(const std::string & filename,
-                         size_t buffer_size = 64*1024);
+                         size_t buffer_size = 64*1024,bool append=false);
+
+
 
     /**
      * @brief WriteBuffers cannot be copied.
@@ -472,7 +474,8 @@ public:
      */
     void initialize(BatsimContext * context,
                     const std::string & jobs_filename,
-                    const std::string & schedule_filename);
+                    const std::string & schedule_filename,
+                    bool append = false);
 
     /**
      * @brief Finalizes the tracer. Writes schedule output file

@@ -17,11 +17,14 @@
 #include <intervalset.hpp>
 
 #include "pointers.hpp"
+#include "batsim_tools.hpp"
+
 
 class Profiles;
 struct Profile;
 class Workload;
 struct Job;
+namespace batsim_tools{struct checkpoint_job_data;};
 
 /**
  * @brief A simple structure used to identify one job
@@ -265,8 +268,7 @@ struct Job
     IntervalSet future_allocation; //!< The future allocation of a job (reservation)
     std::vector<double> submission_times;
     std::string jitter = "";
-    bool chkpt_completed=false; //!< Used for checkpointing
-    double chkpt_progress=-1.0; //!< Used for checkpointing
+    struct batsim_tools::checkpoint_job_data * checkpoint_job_data = nullptr; //!< Used for batsim-checkpointing
 public:
     /**
      * @brief Computes the task progression of this job
@@ -284,7 +286,9 @@ public:
      */
     static JobPtr from_json(const rapidjson::Value & json_desc,
                            Workload * workload,
-                           const std::string & error_prefix = "Invalid JSON job");
+                           const std::string & error_prefix = "Invalid JSON job",
+                           int nb_checkpoint=-1);
+    
 
     /**
      * @brief Creates a new-allocated Job from a JSON description
@@ -296,7 +300,8 @@ public:
      */
     static JobPtr from_json(const std::string & json_str,
                            Workload * workload,
-                           const std::string & error_prefix = "Invalid JSON job");
+                           const std::string & error_prefix = "Invalid JSON job",
+                           int nb_checkpoint=-1);
     /**
      * @brief Checks whether a job is complete (regardless of the job success)
      * @return true if the job is complete (=has started then finished), false otherwise.
@@ -369,7 +374,7 @@ public:
      * @param[in] doc The JSON document
      * @param[in] filename The name of the file the JSON document has been extracted from
      */
-    void load_from_json(const rapidjson::Document & doc, const std::string & filename);
+    void load_from_json(const rapidjson::Document & doc, const std::string & filename, int nb_checkpoint=-1);
 
     /**
      * @brief Accesses one job thanks to its identifier

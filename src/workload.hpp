@@ -50,7 +50,8 @@ public:
      */
     static Workload * new_static_workload(const std::string & workload_name,
                                           const std::string & workload_file,
-                                          const MainArguments * main_arguments,                     
+                                          const MainArguments * main_arguments,
+                                          BatsimContext * context,                     
                                             double speed = 1.0);
 
     /**
@@ -73,6 +74,14 @@ public:
      */
     void load_from_json(const std::string & json_filename,
                         int & nb_machines);
+        /**
+     * @brief Loads a static workload from a JSON filename, a checkpointed json
+     * @param[in] json_filename The name of the JSON file
+     * @param[out] nb_machines The number of machines described in the JSON file
+     */
+    void load_from_json_chkpt(const std::string & json_filename,
+                        int & nb_machines);
+
 
     /**
      * @brief Registers SMPI applications
@@ -100,7 +109,7 @@ public:
      * @brief Writes Workload out to file
      * @return true if success
      */
-    bool write_out_workload(const std::string filename,int nb_machines);
+    bool write_out_batsim_checkpoint(const std::string filename);
 
     /**
      * @brief Returns whether the workload is static (corresponding to a Batsim input workload/workflow) or not
@@ -141,6 +150,7 @@ public:
     double _performance_factor = 1.0; //!< multiplied by duration of jobs to simulate performance speed increases
     double _global_checkpointing_interval = -1.0; //!< overrides optimal checkpointing and other per-job checkpointing
     double _speed; //!< speed of nodes in this workload
+    BatsimContext* context = nullptr;
 };
 
 

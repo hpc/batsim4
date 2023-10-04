@@ -40,7 +40,7 @@ public:
      * @param[in] job_name The job name
      */
     explicit JobIdentifier(const std::string & workload_name,
-                           const std::string & job_name);
+                           const std::string & job_name,int int_id=-1);
 
     /**
      * @brief Creates a JobIdentifier from a string to parse
@@ -86,6 +86,12 @@ public:
      * @return The job name within the workload.
      */
     std::string job_name() const;
+    /**
+     * @brief Returns the job number as an int
+     * @return the integer number
+     * 
+     */
+    int job_number() const;
 
 private:
     /**
@@ -97,6 +103,7 @@ private:
 private:
     std::string _workload_name; //!< The name of the workload the job belongs to
     std::string _job_name; //!< The job unique name inside its workload
+    int _job_number=0;
     std::string _representation; //!< Stores a string representation of the JobIdentifier
 };
 
@@ -175,11 +182,14 @@ struct BatTask
      */
     void compute_tasks_progress();
 
+    
+
 private:
     /**
      * @brief Compute the progress of a leaf task
      */
     void compute_leaf_progress();
+   
 
 public:
     JobPtrWeak parent_job; //!< The parent job that owns this task
@@ -197,6 +207,7 @@ public:
     std::vector<BatTask*> sub_tasks; //!< List of sub tasks that must be executed sequentially. Only set for BatTask non-leaves with sequential profiles at the moment, but it may be used for parallel composition in the future.
     unsigned int current_task_index = static_cast<unsigned int>(-1); //!< Index of the task that is currently being executed in the sub_tasks vector. Only set for BatTask non-leaves with sequential profiles.
     double current_task_progress_ratio = 0; //!< Gives the progress of the current task from 0 to 1. Only set for BatTask non-leaves with sequential profiles.
+
 };
 
 
@@ -224,7 +235,7 @@ struct Job
     IntervalSet allocation; //!< The machines on which the job has been executed.
     std::vector<int> smpi_ranks_to_hosts_mapping; //!< If the job uses a SMPI profile, stores which host number each MPI rank should use. These numbers must be in [0,required_nb_res[.
     std::string metadata; //!< Metadata that the scheduler can set on the job
-
+    std::string batsim_metadata; //!<metadata that batsim sets on a job
     // Current state
     JobState state; //!< The current state of the job
     long double starting_time; //!< The time at which the job starts to be executed.
@@ -238,13 +249,39 @@ struct Job
     long double walltime = -1; //!< The job walltime: if the job is executed for more than this amount of time, it will be killed. Set at -1 to disable this behavior
     unsigned int requested_nb_res; //!< The number of resources the job is requested to be executed on
     int return_code = -1; //!< The return code of the job
-
+    
+    //CCU-LANL Additions
+    double checkpoint_interval = -1.0; //!< Checkpoint interval for this job
+    double dump_time = -1.0; //!< time it takes for this job to "dump" checkpoint data
+    double read_time = -1.0; //!< time it takes for this job to read from checkpointed data
+    double MTBF = -1.0; //!< Mean Time Between Failure for all jobs -- was added so it could be written out to out_jobs.csv
+    double SMTBF = -1.0; //!< System Mean Time Between Failure for all jobs -- was added so it could be written out to out_jobs.csv
+    double error_MTBF = -1.0; //!< error added to optimal checkpoint interval (for testing) -- was added so it could be written out to out_jobs.csv
+    double progress = -1.0; //!< progress of job calculated using compute_job_progress()   -- this is computed when a job is killed in jobs_execution.cpp
+                            //   it is necessary for making sure we keep this value when calculating batsim_meta in export.cpp
+    int cores = 1; //the amount of cores this job uses
+    std::string purpose = "job"; //the purpose ("job" || "reservation")
+    double start = -1.0; //when a job will start (reservation)
+    IntervalSet future_allocation; //!< The future allocation of a job (reservation)
+    std::vector<double> submission_times;
+<<<<<<< HEAD
+    std::string jitter = "";
+=======
+    bool chkpt_completed=false; //!< Used for checkpointing
+    double chkpt_progress=-1.0; //!< Used for checkpointing
+>>>>>>> checkpoint_batsim
 public:
     /**
      * @brief Computes the task progression of this job
      * @return The task progress tree with filled-up associated values
      */
     BatTask * compute_job_progress();
+
+    /**
+     * @brief Computes the task progression of this job
+     * @return The task progress tree with filled-up associated values
+     */
+    BatTask * compute_job_progress_flops();
 
     /**
      * @brief Creates a new-allocated Job from a JSON description
@@ -274,6 +311,15 @@ public:
      * @return true if the job is complete (=has started then finished), false otherwise.
      */
     bool is_complete() const;
+
+    //CCU-LANL Additions
+    /**
+     * @brief turns a rapidjson Document into a json description string
+     * @param[in] doc the rapidjson Document to turn into string
+     * @return The string version of the Document for use in json descriptions
+     */
+    static std::string to_json_desc(rapidjson::Document * doc);
+
 };
 
 /**
@@ -413,12 +459,22 @@ public:
      * @return the number of jobs of the Jobs instance
      */
     int nb_jobs() const;
+    /**
+     * @brief Returns a vector of the _jobs in the unordered_map
+     * @return the vector of JobPtrs
+     */
+    std::vector<std::pair<JobIdentifier,JobPtr>>* get_jobs_as_vector();
+    std::vector<JobPtr>* get_jobs_as_copied_vector();
+    static std::vector<JobPtr>* get_jobs_as_copied_vector(std::vector<JobPtr> * oldJobs,Workload * workload);
+    void extend(std::vector<JobPtr>* jobs);
+    void set_jobs(std::vector<JobPtr>* jobs);
 
 private:
     std::unordered_map<JobIdentifier, JobPtr, JobIdentifierHasher> _jobs; //!< The map that contains the jobs
     std::unordered_map<JobIdentifier, bool, JobIdentifierHasher> _jobs_met; //!< Stores the jobs id already met during the simulation
     Profiles * _profiles = nullptr; //!< The profiles associated with the jobs
     Workload * _workload = nullptr; //!< The Workload the jobs belong to
+
 };
 
 /**

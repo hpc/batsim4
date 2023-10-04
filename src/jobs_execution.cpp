@@ -10,7 +10,7 @@
 #include "jobs.hpp"
 #include "task_execution.hpp"
 #include "server.hpp"
-#include "batsim_tools.hpp"
+//#include "batsim_tools.hpp"
 
 #include <simgrid/s4u.hpp>
 #include <simgrid/plugins/energy.h>
@@ -654,7 +654,7 @@ void killer_process(BatsimContext * context,
     for (batsim_tools::Kill_Message * job_msg : jobs_msgs)
     {
         
-        auto job = context->workloads.job_at(job_msg->id);
+        auto job = context->workloads.job_at(*(job_msg->id));
 
         xbt_assert(! (job->state == JobState::JOB_STATE_REJECTED ||
                       job->state == JobState::JOB_STATE_SUBMITTED ||

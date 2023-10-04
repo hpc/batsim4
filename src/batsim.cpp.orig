@@ -25,10 +25,11 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <stdio.h>
 #include <unistd.h>
 
 #include <string>
+#include <boost/regex.hpp>
+#include <map>
 #include <fstream>
 #include <functional>
 #include <streambuf>
@@ -58,6 +59,7 @@
 #include "server.hpp"
 #include "workload.hpp"
 #include "workflow.hpp"
+#include "batsim_tools.hpp"
 
 #include "docopt/docopt.h"
 
@@ -143,6 +145,7 @@ VerbosityLevel verbosity_level_from_string(const std::string & str)
     }
 }
 
+
 void parse_main_args(int argc, char * argv[], MainArguments & main_args, int & return_code,
                      bool & run_simulation)
 {
@@ -175,6 +178,8 @@ Input options:
   -p, --platform <platform_file>     The SimGrid platform to simulate.
   -w, --workload <workload_file>     The workload JSON files to simulate.
   -W, --workflow <workflow_file>     The workflow XML files to simulate.
+  --repair <repair_file>             The repair time for individual machines JSON file.
+                                     [default: none]
   --WS, --workflow-start (<cut_workflow_file> <start_time>)  The workflow XML
                                      files to simulate, with the time at which
                                      they should be started.
@@ -213,6 +218,40 @@ Output options:
                                      simulation output [default: out].
   --disable-schedule-tracing         Disables the Pajé schedule outputting.
   --disable-machine-state-tracing    Disables the machine state outputting.
+  --output-svg <string>              Output svg files of the schedule.  Only used for algorithms
+                                     that use Schedule class options: (none || all || short)
+                                     all: every change to the schedule is made into an svg
+                                     short: every loop through make_decisions is made into an svg
+                                     [default: none]
+  --svg-frame-start <INT>            What frame number to start outputing svgs
+                                     [default: 1]
+  --svg-frame-end <INT>              What frame number to end outputing svgs
+                                     '-1' is to the end.
+                                     [default: -1]
+  --svg-output-start <INT>           What output number to start outputing svgs
+                                     [default: 1]
+  --svg-output-end <INT>             What output number to end outputing svgs
+                                     [default: -1]
+  --turn-off-extra-info              Normally extra info: 
+                                     '
+                                     simulation time, jobs actually completed,real time,
+                                     number of jobs running, utilization, utilization with no reservations'
+                                     '
+                                     is written out to '<output_prefix>_extra_info.csv'
+                                     This flag will turn it off.
+
+Checkpoint Batsim options:
+  --checkpoint-batsim-interval <string>     Will checkpoint batsim at <string> regular intervals
+                                            Where <string> is in format:
+                                            "real|simulated:days-HH:MM:SS"
+                                            'real' prepended will interpret the interval to be in real time
+                                            'simulated' prepended will interpret the interval to be in simulated time
+                                            False turns off
+                                            [default: False]
+  --start-from-checkpoint <int>      Will start batsim from checkpoint #.
+                                     Numbers go back in time...so 1 is the latest, 2 is the second latest
+                                     Currently the only valid number is 1, the latest
+                                     [default: -1]
 
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
@@ -275,6 +314,71 @@ Other options:
   --log-b-log                        If set, turns the additional b_log (batsched_log) logs on.
                                      Currently FAILURES are the only option
                                      [default: false]
+Workload Options:
+  --reservations-start <STR>         Meant for monte-carlo with reservations, staggering
+                                     their start time.  STR is string in following format:
+                                     '<order#>:<-|+><#seconds>'
+                                        where order# is the order (starting at 0) in the reservation array as described in your config file
+                                        where you (must) choose -(negative,behind) or +(positive,ahead)
+                                        where you specify the amount of seconds forward or backward
+                                     'example_1: --reservations-start '0:+5'
+                                        start the reservations with order# 0, 5 seconds ahead
+                                     'example_2: --reservations-start '1:-2000'
+                                        start the reservations with order# 1, 2000 seconds behind
+                                     'example_3: --reservations-start '0:+5 , 1:-2000'
+                                        only one invocation of this flag is allowed but values for different
+                                        order #s can be acheived with a comma. spaces are allowed for easier viewing.
+                                     [default: false]
+  --submission-time-after <STR>      'This dictates the time between submissions and what kind of randomness.
+                                     'format: '<#:(fixed[:#])|(exp|#:unif)[:(#|s[:#]])'
+                                     '   or   'shuffle[:#]'
+                                     'It is applied after sorting the current workload by submit time and after applying the copy option
+                                     'If zero is used for a float,combined with ":fixed" then all jobs will start at time zero.
+                                     'If omitted, the original submission times will be used, be that grizzly produced or synthetically produced
+                                     'exp:    This will be exponentially distributed, random values with mean time between submissions to be FLOAT.
+                                     'fixed:  All jobs will have this time between them unless zero is used for a FLOAT.
+                                     'unif:   This will be uniform, random values from min:max
+                                     's:      Used after the random types (exp|fixed|unif) to specify you want the job's submit times shuffled after.
+                                     'shuffle: Will simply shuffle around the submit times amongst the jobs.
+                                     'a seed can be put on the end of the string to use for deterministic behavior
+                                     'ex:
+                                     '       '--submission-time-after "200.0:exp:s"'
+                                     '       '--submission-time-after "100.0:fixed"'
+                                     '       '--submission-time-after "0.0:fixed"'
+                                     '       '--submission-time-after "0:200.0:unif"'
+                                     '       '--submission-time-after "200.0:exp:10"'  <-- 10 is the seed
+                                     '       '--submission-time-after "0:200.0:unif:20"' <-- 20 is the seed
+                                     '       '--submission-time-after "shuffle:20" <-- 20 is the seed
+                                     [default: false]
+  --submission-time-before <STR>     Same as --submission-time-after except it is applied before the copy option.  Can use both at the same time.
+                                     [default: false]
+  --copy <STR>                       'The amount of copies the ending workload will have, along with submission time optional options
+                                     'format: '<#copies>[:(+|-):#:(fixed|#:unif:(single|each-copy|all)[:<seed#>] ])'
+                                     '    or  '<#copies>[:=:#(fixed|((exp|:#:unif)[:<seed#>]) ]'
+                                     'So you can just do number of copies, or
+                                     ''=':
+                                     '   * you can copy and set the submission time of the copy as an exponential,uniform,or fixed amount with '=', or
+                                     ''+|-':
+                                     '   * you can add a submission time to add some jitter. This submission time is either added or subtracted with (+|-)
+                                     '   * This time can be a fixed number followed by :fixed or uniform random number between 2 numbers
+                                     '   * If random:
+                                     '       * you need to specify the second number with :#:unif:
+                                     '       * you need to specify:  'single','each-copy',or 'all'
+                                     '       * 'single' random number, single random number for 'each-copy', or random number for 'all'
+                                     '2 copies here means if there are 10 jobs to start with, there will be 20 total after the operation.
+                                     ' Examples:
+                                     '                       '2'    - 2 copies no alteration in submission times
+                                     '             '2:=:100:exp'    - 2 copies with 1 having original times, 1 having exponential random with a mean rate of 100 seconds.
+                                     '             '2:=:0:fixed'    - 2 copies with 1 having original times, 1 having fixed time of 0
+                                     '       '2:=:20:40:unif:30'    - 2 copies with 1 having original times, 1 having uniform random between 20 and 40 seconds. Use 30 as seed.
+                                     '            '2:+:10:fixed'    - 2 copies, add 10 seconds fixed jitter to submission times
+                                     '            '2:-:10:fixed'    - 2 copies, subtract 10 seconds fixed jitter from submission times
+                                     '    '2:+:5:10:unif:single'    - 2 copies, get one random number between 5 and 10 and add it to all copied submission times
+                                     '    '3:+:5:10:unif:all:20'    - 3 copies, get random numbers between 5 and 10 for all jobs of all copies, add it to submission times
+                                     '                                  and seed the random generator with 20
+                                     ' '3:+:5:10:unif:each-copy'    - 3 copies, get one random number between 5 and 10 and add it to all submission times of first copy
+                                     '                                  then get another random number between 5 and 10 and add it to all sub times of second copy
+                                     [default: false]
 Failure Options:
   --MTBF <time-in-seconds>           The Mean Time Between Failure in seconds
                                      [default: -1.0]
@@ -283,19 +387,51 @@ Failure Options:
   --fixed-failures <time-in-seconds>          Failures will happen every 'time in seconds'
                                               Can be used in conjunction with SMTBF
                                               [default: -1.0]
-  --seed-failures                    Enables the seeding of random number generators,
+  --seed-failures                    Enables the seeding of random number generators for failures,
                                      making the results non-deterministic
                                      [default: false]
+  --MTTR <time-in-seconds>           Sets a system-wide Mean Time To Repair, in seconds, for a node that goes down
+                                     [default: -1.0]
   --repair-time <time-in-seconds>    Sets a system-wide repair time, in seconds, for a node that goes down
                                      [default: 0.0]
+  --seed-repair-times                Enables the seeding of random number generators for repair times,
+                                     making the results non-deterministic
+                                     [default: false]
   --log-failures                     When set, puts failures and their type in a log file
                                      [default: false]
+  --queue-policy <STR>               What the policy for the queue is when dealing with a re-submitted
+                                     job.  The options are:   FCFS | ORIGINAL-FCFS
+                                     Usually the queue is FCFS based on the submit time.
+                                     ORIGINAL-FCFS would put resubmitted jobs at the front of the queue
+                                     based on their original submit time.
+                                     [default: FCFS]
+Schedule Options:
+  --queue-depth <int>               The amount of items in the queue that will be scheduled at a time
+                                    A lower amount will improve performance of the scheduler and thus the simulation 
+                                    (-1) refers to all items will be scheduled, zero will be discarded
+                                    Only used on algorithms that use the Queue class (and only conservative_bf atm)
+                                    [default: -1]
+
 Performance Options:
   --performance-factor <percentage decimal>   If set this will increase/decrease the real_duration
                                               of each job by this factor 
                                               [default: 1.0]
+  --share-packing                    if set, will pack single resource jobs onto one node until
+                                     that node reaches '--core-percent' * available cores
+                                     [default: false]
+  --core-percent <float>             sets the limit on how many cores from a node can be used
+                                     [default: 1.0]
+  --share-packing-holdback <int>     if set, will holdback a certain number of nodes for
+                                     exclusive share-packing
+                                     [default: 0]
+
 Checkpointing Options:
   --checkpointing-on                 Enables checkpointing.
+                                     [default: false]
+  --subtract-progress-from-walltime  When checkpointing will subtract the progress made from the walltime
+                                     In a way, this will penalize jobs for a failure by giving it less time when resubmitted
+                                     But in another way it will help the job schedule faster by being able to backfill into
+                                     places it normally wouldn't be able to
                                      [default: false]
   --checkpointing-interval <intrvl>  set the system wide checkpointing interval, float or integer
                                      [default: -1.0]
@@ -303,6 +439,18 @@ Checkpointing Options:
                                      [default: false]
   --compute_checkpointing_error <e>  Allows for an error 'e' (double) to computed checkpoints
                                      [default: 1.0]
+
+Reservation Options:
+  --reschedule-policy <string>       What the policy for adding a reservation is.
+                                     When the reservation affects already scheduled jobs should it
+                                     reschedule (RESCHEDULE_AFFECTED || RESCHEDULE_ALL) jobs
+                                     [default: RESCHEDULE_AFFECTED]
+  --impact-policy <string>           What the policy for impacting running/scheduled jobs when
+                                     a reservation does not include a set allocation
+                                     (LEAST_KILLING_LARGEST_FIRST || LEAST_KILLING_SMALLEST_FIRST
+                                     || LEAST_RESCHEDULING ( TODO ))
+                                     [default: LEAST_KILLING_LARGEST_FIRST]
+
   -h, --help                         Shows this help.
 )";
     //CCU-LANL Additions Above ^^ batsched-cfg, Failure Options, Checkpointing Options,Performance Options
@@ -310,10 +458,25 @@ Checkpointing Options:
     return_code = 1;
     map<string, docopt::value> args = docopt::docopt(usage, { argv + 1, argv + argc },
                                                      true, STR(BATSIM_VERSION));
+    
     // Let's do some checks on the arguments!
     bool error = false;
     return_code = 0;
-
+<<<<<<< HEAD
+    /*
+    for (auto key_value:args)
+    {
+        std::cout<<key_value.first<<":    "<<key_value.second<<std::endl;
+    }
+    */
+=======
+/*comment this code, only for debug
+    for( auto pair : args)
+    {
+        std::cout<<pair.first<<": "<<pair.second<<std::endl;
+    }
+/**/
+>>>>>>> checkpoint_batsim
    //CCU-LANL Additions
    main_args.performance_factor = (double) ::atof(args["--performance-factor"].asString().c_str());
    main_args.checkpointing_on = args["--checkpointing-on"].asBool();
@@ -326,6 +489,212 @@ Checkpointing Options:
    main_args.repair_time = atof(args["--repair-time"].asString().c_str());
    main_args.fixed_failures = atof(args["--fixed-failures"].asString().c_str());
    main_args.log_b_log = args["--log-b-log"].asBool();
+   main_args.core_percent = (double) std::atof(args["--core-percent"].asString().c_str());
+   main_args.share_packing = args["--share-packing"].asBool();
+   main_args.share_packing_holdback = args["--share-packing-holdback"].asLong();
+  
+   main_args.reschedule_policy = args["--reschedule-policy"].asString();
+   main_args.output_svg = args["--output-svg"].asString();
+   main_args.impact_policy = args["--impact-policy"].asString();
+   main_args.subtract_progress_from_walltime = args["--subtract-progress-from-walltime"].asBool();
+   main_args.svg_frame_start = args["--svg-frame-start"].asLong();
+   main_args.svg_frame_end = args["--svg-frame-end"].asLong();
+   main_args.svg_output_start = args["--svg-output-start"].asLong();
+   main_args.svg_output_end = args["--svg-output-end"].asLong();
+   
+   main_args.repair_time_file = args["--repair"].asString();
+   main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
+   main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
+   main_args.seed_repair_time = args["--seed-repair-times"].asBool();
+   main_args.MTTR = atof(args["--MTTR"].asString().c_str());
+<<<<<<< HEAD
+   main_args.queue_policy = args["--queue-policy"].asString();
+   std::string copy = args["--copy"].asString();
+   std::string submission_time_after = args["--submission-time-after"].asString();
+   std::string submission_time_before = args["--submission-time-before"].asString();
+   std::string submission_time;
+   std::string ourRegExString;
+   std::string decimal=R"((?:\d+(?:\.\d*)?|\.\d+))";
+   boost::smatch sm;
+   boost::regex aRegEx;
+   bool regExMatch = false;
+   //parse copy:
+   if (copy != "false")
+   {
+    MainArguments::Copies * copies = new MainArguments::Copies();
+    //can be just an int or followed by +|-|= followed by :int followed by fixed|exp|:int then 
+    //   if fixed nothing should come after it
+    //   if exp optionally followed by :int
+    //   if :int followed by :unif: followed by single|each-copy|all optionally followed by :int
+    aRegEx = boost::regex(R"(([0-9]+)(?:$|(?:[:]([+]|[-]|[=]):([0-9]+):(fixed|exp|[0-9]+)(?:$|(?:(?<=exp):([0-9]+)$)|(?:[:](unif):(single|each[-]copy|all)(?:$|(?:[:]([0-9]+))))))))");
+    regExMatch = boost::regex_match(copy,sm,aRegEx);
+    //sm [1]=int [2]=+|-|=|blank [3]=int|blank [4]=fixed|exp|int|blank [5]=int|blank  [6]=unif|blank [7]=single|each-copy|all|blank [8]=int|blank
+    if (regExMatch)
+    {
+        copies->copies=sm[1];  // = int
+        copies->symbol=sm[2];  // = +|-|blank
+        copies->value1=sm[3];  // = int|blank
+        copies->value2=sm[4];  // = fixed|exp|int|blank
+        copies->seed=sm[5];    // = int|blank
+        copies->unif=sm[6];    // = unif|blank
+        copies->howMany=sm[7]; // = single|each-copy|all|blank
+        if (copies->seed=="")
+            copies->seed=sm[8];
+        main_args.copy = copies;
+        
+    }
+    xbt_assert(regExMatch,"Error: '--copy %s' is in the wrong format",submission_time.c_str());
+   }
+   submission_time = submission_time_after;
+   if (submission_time !="false")
+   {
+        MainArguments::SubmissionTimes * submission_times = new MainArguments::SubmissionTimes();
+        
+        ourRegExString = 
+            batsim_tools::string_format(R"((%s):(exp|fixed)(?:$|(?:[:](?<=exp[:])(?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))",decimal.c_str());
+=======
+   main_args.checkpoint_batsim_interval = args["--checkpoint-batsim-interval"].asString();
+   main_args.start_from_checkpoint = args["--start-from-checkpoint"].asLong();
+   
+>>>>>>> checkpoint_batsim
+
+        aRegEx = boost::regex(ourRegExString);
+        regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+        if (regExMatch)
+        {
+            submission_times->value1=sm[1];    // = float|blank
+            submission_times->value2="";       // = float|blank
+            submission_times->random=sm[2];    // = exp|fixed|unif|blank
+            submission_times->shuffle=sm[3];   // = s|shuffle|blank
+            submission_times->seed=sm[4];      // = int|blank
+            if (submission_times->seed=="")
+                submission_times->seed=sm[5];
+            main_args.submission_time_after = submission_times;
+        }
+        else
+        {
+            ourRegExString = 
+                batsim_tools::string_format(R"((%s):(%s):(unif)(?:$|(?:[:](?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))",decimal.c_str(),decimal.c_str());
+            aRegEx = boost::regex(ourRegExString);
+            regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+            if (regExMatch)
+            {
+                submission_times->value1=sm[1];
+                submission_times->value2=sm[2];
+                submission_times->random=sm[3];
+                submission_times->shuffle=sm[4];
+                submission_times->seed=sm[5];
+                if (submission_times->seed == "")
+                    submission_times->seed=sm[6];
+                  
+            }
+            else
+            {
+                aRegEx = boost::regex(R"((shuffle)(?:$|(?:[:]([0-9]+))))");
+                regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+                if (regExMatch)
+                {
+                    submission_times->value1="";
+                    submission_times->value2="";
+                    submission_times->random="";
+                    submission_times->shuffle=sm[1];
+                    submission_times->seed=sm[2];
+                }
+                
+            }
+            xbt_assert(regExMatch,"Error: '--submission-time %s' is in the wrong format",submission_time.c_str());
+            main_args.submission_time_after = submission_times;
+        }
+        
+   }
+      submission_time = submission_time_before;
+   if (submission_time !="false")
+   {
+        MainArguments::SubmissionTimes * submission_times = new MainArguments::SubmissionTimes();
+        std::string decimal=R"(((?:\d+(?:\.\d*)?|\.\d+)))";
+        std::string format2 = R"(:(exp|fixed)(?:$|(?:[:](?<=exp[:])(?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))";
+        std::string ourRegEx = decimal + format2;
+        aRegEx = boost::regex(ourRegEx);
+        regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+        if (regExMatch)
+        {
+            submission_times->value1=sm[1];    // = float|blank
+            submission_times->value2="";       // = float|blank
+            submission_times->random=sm[2];    // = exp|fixed|unif|blank
+            submission_times->shuffle=sm[3];   // = s|shuffle|blank
+            submission_times->seed=sm[4];      // = int|blank
+            if (submission_times->seed=="")
+                submission_times->seed=sm[5];
+            main_args.submission_time_before = submission_times;
+        }
+        else
+        {
+            std::string format = R"(:(unif)(?:$|(?:[:](?:(?:(s)(?:$|(?:[:]([0-9]+))))|([0-9]+)))))";
+            std::string ourRegEx2 = decimal+":"+decimal+format;
+            aRegEx = boost::regex(ourRegEx2);
+            regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+            if (regExMatch)
+            {
+                submission_times->value1=sm[1];
+                submission_times->value2=sm[2];
+                submission_times->random=sm[3];
+                submission_times->shuffle=sm[4];
+                submission_times->seed=sm[5];
+                if (submission_times->seed == "")
+                    submission_times->seed=sm[6];
+                  
+            }
+            else
+            {
+                aRegEx = boost::regex(R"((shuffle)(?:$|(?:[:]([0-9]+))))");
+                regExMatch = boost::regex_match(submission_time,sm,aRegEx);
+                if (regExMatch)
+                {
+                    submission_times->value1="";
+                    submission_times->value2="";
+                    submission_times->random="";
+                    submission_times->shuffle=sm[1];
+                    submission_times->seed=sm[2];
+                }
+                
+            }
+            xbt_assert(regExMatch,"Error: '--submission-time %s' is in the wrong format",submission_time.c_str());
+            main_args.submission_time_before = submission_times;
+        }
+        
+   }
+
+   //parse reservations-start
+   std::string reservations_start = args["--reservations-start"].asString();
+   if (reservations_start != "false")
+   {
+    std::map<int,double>* starts = new std::map<int,double>();
+	aRegEx = boost::regex(R"(([0-9]+)[ ]*:[ ]*([-+])[ ]*([0-9]+))");
+    
+
+        while (boost::regex_search(reservations_start, sm, aRegEx))
+        {
+            if (sm[2]=="+")
+            {
+                (*starts)[std::atoi(sm[1].str().c_str())]=double(std::atol(sm[3].str().c_str())); 
+            }
+            else
+                (*starts)[std::atoi(sm[1].str().c_str())]=double(std::atol((sm[2].str()+sm[3].str()).c_str()));
+            reservations_start = sm.suffix().str();
+        } 
+        
+        main_args.reservations_start = starts;
+    }
+   
+
+      
+  
+  
+
+
+
+
+   
    
     
     if (args["--simgrid-version"].asBool())
@@ -453,7 +822,7 @@ Checkpointing Options:
             }
         }
     }
-
+ 
     // EventLists
     vector<string> events_files = args["--events"].asStringList();
     for (size_t i = 0; i < events_files.size(); i++)
@@ -485,7 +854,7 @@ Checkpointing Options:
     main_args.hosts_roles_map[main_args.master_host_name] = "master";
 
     main_args.energy_used = args["--energy"].asBool();
-
+  
 
     // get roles mapping
     vector<string> hosts_roles_maps = args["--add-role-to-hosts"].asStringList();
@@ -506,6 +875,7 @@ Checkpointing Options:
             main_args.hosts_roles_map[host] = roles;
         }
     }
+  
 
     main_args.socket_endpoint = args["--socket-endpoint"].asString();
     main_args.redis_enabled = args["--enable-redis"].asBool();
@@ -527,6 +897,19 @@ Checkpointing Options:
     main_args.export_prefix = args["--export"].asString();
     main_args.enable_schedule_tracing = !args["--disable-schedule-tracing"].asBool();
     main_args.enable_machine_state_tracing = !args["--disable-machine-state-tracing"].asBool();
+    //CCU-LANL ADDITION
+    if (main_args.output_extra_info)
+    {
+        std::ofstream f(main_args.export_prefix+"_extra_info.csv",std::ios_base::out);
+        if (f.is_open())
+        {
+            f<<"actually_completed_jobs,nb_jobs,percent_done,real_time,sim_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv,"
+            <<"node_mem_total,node_mem_available,batsim_USS,batsim_PSS,batsim_RSS,batsched_USS,batsched_PSS,batsched_RSS"<<std::endl;
+            f.close();
+        }
+    }
+
+
 
     // Job-related options
     // *******************
@@ -534,7 +917,7 @@ Checkpointing Options:
     main_args.dynamic_registration_enabled = args["--enable-dynamic-jobs"].asBool();
     main_args.ack_dynamic_registration = args["--acknowledge-dynamic-jobs"].asBool();
     main_args.profile_reuse_enabled = args["--enable-profile-reuse"].asBool();
-
+    
     if (main_args.profile_reuse_enabled && !main_args.dynamic_registration_enabled)
     {
         XBT_ERROR("Profile reuse is enabled but dynamic registration is not, have you missed something?");
@@ -626,6 +1009,7 @@ Checkpointing Options:
    
     
     run_simulation = !error;
+  
 }
 
 void configure_batsim_logging_output(const MainArguments & main_args)
@@ -680,23 +1064,18 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
     for (const MainArguments::WorkloadDescription & desc : main_args.workload_descriptions)
     {
         
+      
         //CCU-LANL Additions  The arguments to new_static_workload
         Workload * workload = Workload::new_static_workload(desc.name,
                                                              desc.filename,
-                                                             main_args.checkpointing_on,
-                                                             main_args.compute_checkpointing,
-                                                             main_args.compute_checkpointing_error,
-                                                             main_args.MTBF,
-                                                             main_args.SMTBF,
-                                                             main_args.fixed_failures,
-                                                             main_args.repair_time,
-                                                             main_args.performance_factor,
-                                                             main_args.global_checkpointing_interval,
+                                                             &main_args,
                                                              context->machines[0]->speed
                                                             );
 
+        
         int nb_machines_in_workload = -1;
         workload->load_from_json(desc.filename, nb_machines_in_workload);
+        context->nb_jobs = workload->jobs->nb_jobs();
         max_nb_machines_in_workloads = std::max(max_nb_machines_in_workloads, nb_machines_in_workload);
 
         context->workloads.insert_workload(desc.name, workload);
@@ -705,7 +1084,7 @@ void load_workloads_and_workflows(const MainArguments & main_args, BatsimContext
     // Let's create the workflows
     for (const MainArguments::WorkflowDescription & desc : main_args.workflow_descriptions)
     {
-        Workload * workload = Workload::new_static_workload(desc.workload_name, desc.filename);
+        Workload * workload = Workload::new_static_workload(desc.workload_name, desc.filename,nullptr);
         workload->jobs = new Jobs;
         workload->profiles = new Profiles;
         workload->jobs->set_workload(workload);
@@ -885,7 +1264,10 @@ int main(int argc, char * argv[])
     // Let's create the BatsimContext, which stores information about the current instance
     BatsimContext context;
     set_configuration(&context, main_args);
+    //CCU-LANL ADDITION
+    context.output_extra_info = main_args.output_extra_info;
 
+    
     context.batsim_version = STR(BATSIM_VERSION);
     XBT_INFO("Batsim version: %s", context.batsim_version.c_str());
     //CCU-LANL Additions
@@ -930,15 +1312,7 @@ int main(int argc, char * argv[])
         SMPI_init();
     }
 
-<<<<<<< HEAD
-    // Register Batsim replay functions
-    xbt_replay_action_register("m_usage", usage_trace_replayer);
-
-    // Let's create the machines
-    create_machines(main_args, &context, max_nb_machines_to_use);
-=======
     
->>>>>>> delay_to_cpu
 
     // Let's prepare Batsim's outputs
     XBT_INFO("Batsim's export prefix is '%s'.", context.export_prefix.c_str());
@@ -1029,6 +1403,8 @@ void set_configuration(BatsimContext *context,
     }
 
     context->platform_filename = main_args.platform_filename;
+    context->repair_time_file = main_args.repair_time_file;
+    context->repair_time = main_args.repair_time;
     context->export_prefix = main_args.export_prefix;
     context->workflow_nb_concurrent_jobs_limit = main_args.workflow_nb_concurrent_jobs_limit;
     context->energy_used = main_args.energy_used;
@@ -1060,6 +1436,7 @@ void set_configuration(BatsimContext *context,
     //CCU-LANL Additions
     context->config_json.AddMember("checkpointing_on", Value().SetBool(main_args.checkpointing_on),alloc);
     context->config_json.AddMember("compute_checkpointing",Value().SetBool(main_args.compute_checkpointing),alloc);
+    context->config_json.AddMember("checkpointing_interval",Value().SetDouble(main_args.global_checkpointing_interval),alloc);
     context->config_json.AddMember("MTBF",Value().SetDouble(main_args.MTBF),alloc);
     context->config_json.AddMember("SMTBF",Value().SetDouble(main_args.SMTBF),alloc);
     context->config_json.AddMember("seed-failures",Value().SetBool(main_args.seed_failures),alloc);
@@ -1070,6 +1447,29 @@ void set_configuration(BatsimContext *context,
 
 
     context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
+    context->config_json.AddMember("share-packing", Value().SetBool(main_args.share_packing),alloc);
+    context->config_json.AddMember("share-packing-holdback",Value().SetInt((int)main_args.share_packing_holdback),alloc);
+    context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
+    context->config_json.AddMember("reschedule-policy",Value().SetString(main_args.reschedule_policy.c_str(),alloc),alloc);
+    context->config_json.AddMember("output-svg",Value().SetString(main_args.output_svg.c_str(),alloc),alloc);
+    context->config_json.AddMember("impact-policy",Value().SetString(main_args.impact_policy.c_str(),alloc),alloc);
+    context->config_json.AddMember("repair-time-file",Value().SetString(main_args.repair_time_file.c_str(),alloc),alloc);
+    context->config_json.AddMember("scheduler-queue-depth",Value().SetInt((int)main_args.scheduler_queue_depth),alloc);
+    context->config_json.AddMember("subtract-progress-from-walltime",Value().SetBool(main_args.subtract_progress_from_walltime),alloc);
+    context->config_json.AddMember("svg-frame-start",Value().SetInt(main_args.svg_frame_start),alloc);
+    context->config_json.AddMember("svg-frame-end",Value().SetInt(main_args.svg_frame_end),alloc);
+    context->config_json.AddMember("svg-output-start",Value().SetInt(main_args.svg_output_start),alloc);
+    context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
+    context->config_json.AddMember("seed-repair-time",Value().SetBool(main_args.seed_repair_time),alloc);
+    context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
+<<<<<<< HEAD
+    context->config_json.AddMember("queue-policy",Value().SetString(main_args.queue_policy.c_str(),alloc),alloc);
+=======
+    context->config_json.AddMember("checkpoint-batsim-interval",Value().SetString(main_args.checkpoint_batsim_interval.c_str(),alloc),alloc);
+>>>>>>> checkpoint_batsim
+    
+
+
 
     // others
     std::string sched_config;

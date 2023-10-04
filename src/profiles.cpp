@@ -33,7 +33,7 @@ Profiles::~Profiles()
     _profiles.clear();
 }
 
-void Profiles::load_from_json(const Document &doc, const string & filename)
+void Profiles::load_from_json(const Document &doc, const string & filename, int nb_checkpoint)
 {
     string error_prefix = "Invalid JSON file '" + filename + "'";
 
@@ -313,7 +313,9 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
             "delay": 20.20,
 
             //CCU-LANL Additions
-            "real_delay": 14.20 [optional - not in file but in simulation]
+            CCU-LANL Additions
+            "real_delay": 14.20,       //optional, used with job-checkpointing
+            "original_delay": 14.20    //optional, used with batsim-checkpointing  
         }
         */
         profile->type = ProfileType::DELAY;
@@ -324,6 +326,18 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
         xbt_assert(json_desc["delay"].IsNumber(), "%s: profile '%s' has a non-number 'delay' field",
                    error_prefix.c_str(), profile_name.c_str());
         data->delay = json_desc["delay"].GetDouble();
+        if(json_desc.HasMember("original_delay"))
+        {
+            xbt_assert(json_desc["original_delay"].IsNumber(), "%s: profile '%s' has a non-number 'original_delay' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->original_delay = json_desc["original_delay"].GetDouble();
+        }
+        if(json_desc.HasMember("real_delay"))
+        {
+            xbt_assert(json_desc["real_delay"].IsNumber(), "%s: profile '%s' has a non-number 'real_delay' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->real_delay = json_desc["real_delay"].GetDouble();
+        }
 
         xbt_assert(data->delay > 0, "%s: profile '%s' has a non-strictly-positive 'delay' field (%g)",
                    error_prefix.c_str(), profile_name.c_str(), data->delay);
@@ -399,7 +413,8 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
             "com": 1e6,
 
             CCU-LANL Additions
-            "real_cpu": 10e6    //Not in file but in simulation
+            "real_cpu": 10e6,       //optional, used with job-checkpointing
+            "original_cpu": 10e6    //optional, used with batsim-checkpointing  
         }
         */
         profile->type = ProfileType::PARALLEL_HOMOGENEOUS;
@@ -410,6 +425,18 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
         xbt_assert(json_desc["cpu"].IsNumber(), "%s: profile '%s' has a non-number 'cpu' field",
                    error_prefix.c_str(), profile_name.c_str());
         data->cpu = json_desc["cpu"].GetDouble();
+        if(json_desc.HasMember("original_cpu"))
+        {
+            xbt_assert(json_desc["original_cpu"].IsNumber(), "%s: profile '%s' has a non-number 'original_cpu' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->original_cpu = json_desc["original_cpu"].GetDouble();
+        }
+        if(json_desc.HasMember("real_cpu"))
+        {
+            xbt_assert(json_desc["real_cpu"].IsNumber(), "%s: profile '%s' has a non-number 'real_cpu' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->real_cpu = json_desc["real_cpu"].GetDouble();
+        }
         xbt_assert(data->cpu >= 0, "%s: profile '%s' has a non-positive 'cpu' field (%g)",
                    error_prefix.c_str(), profile_name.c_str(), data->cpu);
 
@@ -432,7 +459,8 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
             "com": 1e6
 
             CCU-LANL Additions
-            "real_cpu": 10e6    //Not in file but in simulation
+            "real_cpu": 10e6,       //optional, used with job-checkpointing
+            "original_cpu": 10e6    //optional, used with batsim-checkpointing    
         }
         */
         profile->type = ProfileType::PARALLEL_HOMOGENEOUS_TOTAL_AMOUNT;
@@ -445,7 +473,18 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
         data->cpu = json_desc["cpu"].GetDouble();
         xbt_assert(data->cpu >= 0, "%s: profile '%s' has a non-positive 'cpu' field (%g)",
                    error_prefix.c_str(), profile_name.c_str(), data->cpu);
-
+        if(json_desc.HasMember("original_cpu"))
+        {
+            xbt_assert(json_desc["original_cpu"].IsNumber(), "%s: profile '%s' has a non-number 'original_cpu' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->original_cpu = json_desc["original_cpu"].GetDouble();
+        }
+        if(json_desc.HasMember("real_cpu"))
+        {
+            xbt_assert(json_desc["real_cpu"].IsNumber(), "%s: profile '%s' has a non-number 'real_cpu' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->real_cpu = json_desc["real_cpu"].GetDouble();
+        }
         xbt_assert(json_desc.HasMember("com"), "%s: profile '%s' has no 'com' field",
                    error_prefix.c_str(), profile_name.c_str());
         xbt_assert(json_desc["com"].IsNumber(), "%s: profile '%s' has a non-number 'com' field",

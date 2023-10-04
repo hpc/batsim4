@@ -4,6 +4,7 @@
  */
 
 #include "workload.hpp"
+//#include "batsim_tools.hpp"
 
 #include <fstream>
 #include <streambuf>
@@ -31,10 +32,11 @@ XBT_LOG_NEW_DEFAULT_CATEGORY(workload, "workload"); //!< Logging
 Workload *Workload::new_static_workload(const string & workload_name,
                                         const string & workload_file,
                                        const MainArguments* main_arguments,
+                                       BatsimContext * context,
                                        double speed)
 {
     Workload * workload = new Workload;
-
+    workload->context=context;
     workload->jobs = new Jobs;
     workload->profiles = new Profiles;
 
@@ -62,7 +64,7 @@ Workload *Workload::new_static_workload(const string & workload_name,
 
 Workload *Workload::new_dynamic_workload(const string & workload_name)
 {
-    Workload * workload = new_static_workload(workload_name, "dynamic",nullptr);
+    Workload * workload = new_static_workload(workload_name, "dynamic",nullptr,nullptr);
 
     workload->_is_static = false;
     return workload;
@@ -477,6 +479,76 @@ void Workload::register_smpi_applications()
 
     XBT_INFO("SMPI applications of workload '%s' have been registered.", name.c_str());
 }
+void Workload::load_from_json_chkpt(const std::string &json_filename, int &nb_machines)
+{
+    XBT_INFO("Loading JSON workload '%s'...", json_filename.c_str());
+    // Let the file content be placed in a string
+    ifstream ifile(json_filename);
+    xbt_assert(ifile.is_open(), "Cannot read file '%s'", json_filename.c_str());
+    string content;
+
+    ifile.seekg(0, ios::end);
+    content.reserve(static_cast<unsigned long>(ifile.tellg()));
+    ifile.seekg(0, ios::beg);
+
+    content.assign((std::istreambuf_iterator<char>(ifile)),
+                std::istreambuf_iterator<char>());
+
+    // JSON document creation
+    Document doc;
+    doc.Parse(content.c_str());
+    xbt_assert(!doc.HasParseError(), "Invalid JSON file '%s': could not be parsed", json_filename.c_str());
+    xbt_assert(doc.IsObject(), "Invalid JSON file '%s': not a JSON object", json_filename.c_str());
+
+    // Let's try to read the number of machines in the JSON document
+    xbt_assert(doc.HasMember("nb_res"), "Invalid JSON file '%s': the 'nb_res' field is missing", json_filename.c_str());
+    const Value & nb_res_node = doc["nb_res"];
+    xbt_assert(nb_res_node.IsInt(), "Invalid JSON file '%s': the 'nb_res' field is not an integer", json_filename.c_str());
+    nb_machines = nb_res_node.GetInt();
+    xbt_assert(nb_machines > 0, "Invalid JSON file '%s': the value of the 'nb_res' field is invalid (%d)",
+               json_filename.c_str(), nb_machines);
+    xbt_assert(doc.HasMember("nb_checkpoint"),"Invalid JSON file '%s': the 'nb_checkpoint' field is missing and you gave batsim the --start-from-checkpoint option",
+                json_filename.c_str());
+    const Value & nb_chkpt = doc["nb_checkpoint"];
+    xbt_assert(nb_chkpt.IsInt(), "Invalid JSON file '%s': the 'nb_checkpoint' field is not an integer",json_filename.c_str());
+    xbt_assert(doc.HasMember("nb_original_jobs"),"Invalid JSON file '%s': the 'nb_original_jobs' field is missing and you gave batsim the --start-from-checkpoint option",
+                json_filename.c_str());
+    const Value & nb_original_jobs = doc["nb_original_jobs"];
+    xbt_assert(nb_original_jobs.IsInt(), "Invalid JSON file '%s': the 'nb_original_jobs' field is not an integer",json_filename.c_str());
+    xbt_assert(doc.HasMember("nb_actually_completed"),"Invalid JSON file '%s': the 'nb_actually_completed' field is missing and you gave batsim the --start-from-checkpoint option",
+                json_filename.c_str());
+    const Value & nb_actually_completed = doc["nb_actually_completed"];
+    xbt_assert(nb_actually_completed.IsInt(), "Invalid JSON file '%s': the 'nb_actually_completed' field is not an integer",json_filename.c_str());
+    int nb_checkpoint = nb_chkpt.GetInt();
+    nb_checkpoint++;
+    this->context->start_from_checkpoint.nb_checkpoint = nb_checkpoint;
+    this->context->start_from_checkpoint.nb_original_jobs = nb_original_jobs.GetInt();
+    this->context->start_from_checkpoint.nb_previously_completed = nb_actually_completed.GetInt();
+    this->context->start_from_checkpoint.nb_actually_completed = nb_actually_completed.GetInt();
+    //CCU-LANL Additions  save the amount of machines there are in the workload
+    _num_machines = nb_machines;
+
+    profiles->load_from_json(doc, json_filename,nb_checkpoint);
+    jobs->load_from_json(doc, json_filename,nb_checkpoint);
+    
+    /* CHECKPOINTING  We won't be altering the workload
+
+    //CCU-LANL Additions alter the workload (right now copy and submission_time options)
+    if(this->main_arguments->copy!=nullptr || this->main_arguments->submission_time_after!=nullptr || this->main_arguments->submission_time_before!=nullptr)
+        alter_workload();
+    */
+
+    XBT_INFO("JSON workload parsed sucessfully. Read %d jobs and %d profiles.",
+             jobs->nb_jobs(), profiles->nb_profiles());
+    XBT_INFO("Checking workload validity...");
+    check_validity();
+    XBT_INFO("Workload seems to be valid.");
+
+    XBT_INFO("Removing unreferenced profiles from memory...");
+    profiles->remove_unreferenced_profiles();
+}
+
+
 
 void Workload::check_validity()
 {
@@ -537,15 +609,19 @@ string Workload::to_string()
 {
     return this->name;
 }
-bool Workload::write_out_workload(const std::string filename,int nb_machines)
+bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
 {
-    std::ofstream f(filename,std::ios_base::out);
+    std::string filename = checkpoint_dir + "/workload.json";
+    std::ofstream f(filename,std::ios_base::trunc);
     if (f.is_open())
     {
         //start our file
         f<<std::fixed<<std::setprecision(15)
         <<"{\n"
-            <<"\t\"nb_res\":"<<nb_machines<<",\n"
+            <<"\t\"nb_res\":"<<this->context->machines.nb_machines()<<",\n"
+            <<"\t\"nb_checkpoint\":"<<this->context->start_from_checkpoint.nb_checkpoint<<",\n"
+            <<"\t\"nb_actually_completed\":"<<this->context->start_from_checkpoint.nb_actually_completed<<",\n"
+            <<"\t\"nb_original_jobs\":"<<this->context->start_from_checkpoint.nb_original_jobs<<",\n"
             <<"\t\"jobs\":[\n";
 
         //lets do our jobs first
@@ -558,12 +634,26 @@ bool Workload::write_out_workload(const std::string filename,int nb_machines)
         long double runtime=0;
         std::string allocation;
         std::string future_allocation;
+        std::map<std::string,ProfilePtr> newProfiles;
+        ProfilePtr newProfile;
+        std::string type;
+        double newWallTime;
+        double progressTimeCpu;
+        double cpuDelay;
+        double realCpuDelay;
+        double originalCpuDelay;
+        double com;
+        std::string json_desc;
         
+
+        
+        /*******************************   Print Out Jobs ***************************/
         for (auto pair: this->jobs->jobs())
         {
             //I only want jobs that are not complete
             if (pair.second != nullptr && !pair.second->is_complete())
             {
+            
                 if (!first)
                 {
                     //ok we can close out the previous one
@@ -573,21 +663,24 @@ bool Workload::write_out_workload(const std::string filename,int nb_machines)
                 running = false;
                 progress = 0;
                 submit = 0;
+                std::string submission_times = batsim_tools::vector_to_string(pair.second->submission_times);
                 
                 state = static_cast<int>(pair.second->state);
                 runtime=0;
                 
                 future_allocation=pair.second->future_allocation.to_string_hyphen();
 
-                //start our job
+                
                 
                 if (pair.second->state == JobState::JOB_STATE_RUNNING)
                 {
                     running = true;
                     submit = now;
-                    progress = pair.second->compute_job_progress()->current_task_progress_ratio;
+                    progress = pair.second->compute_job_progress()->current_task_progress_ratio; //progress is the amount that has been done, not remaining
+                                                                                                 //do (1-progress) to get amount remaining
                     allocation = pair.second->allocation.to_string_hyphen();
                     runtime = now - pair.second->starting_time;
+                    
                 }
                 else
                 {
@@ -595,32 +688,100 @@ bool Workload::write_out_workload(const std::string filename,int nb_machines)
                     progress = 0;
                     allocation = "null";
     
-                }    
+                }
+
+                /*****************************     Making Modified Profile    ********************************/
+
+                //lets make a profile out of this data
+                //lets also set walltime while we are at it
+                if (pair.second->profile->type == ProfileType::DELAY)
+                {
+                    //ok lets get our job's profile data first
+                    auto data = static_cast<DelayProfileData *>(pair.second->profile->data);
+                    type = "delay";
+                    cpuDelay = data->delay;
+                    realCpuDelay = data->real_delay;
+                    originalCpuDelay = data->original_delay;
+                    
+                    //now lets change these values based on progress
+                    progressTimeCpu = cpuDelay*progress; //multiply by progress
+                    cpuDelay = cpuDelay*(1-progress);  //multiply by remaining
+                    realCpuDelay = cpuDelay;  //not sure it was necessary to add original_delay.  maybe this could've held this value.
+                    //now make a json description
+                    json_desc = batsim_tools::string_format(    "{"
+                                                                "\"type\": \"%s\","
+                                                                "\"delay\":%f,"
+                                                                "\"real_delay\":%f,"
+                                                                "\"original_delay\":%f"
+                                                                "}", type.c_str(),cpuDelay,realCpuDelay,originalCpuDelay);
+                    //ok progressTimeCpu is just a time                                                                
+                    newWallTime = pair.second->walltime - progressTimeCpu; 
+                    
+                }
+                else if (pair.second->profile->type == ProfileType::PARALLEL_HOMOGENEOUS)
+                {
+                    //ok lets get our job's profile data first
+                    auto data = static_cast<ParallelHomogeneousProfileData *>(pair.second->profile->data);
+                    type = "parallel_homogeneous";
+                    cpuDelay = data->cpu;
+                    realCpuDelay = data->real_cpu;
+                    originalCpuDelay = data->original_cpu;
+                    com = data->com;
+                    //now lets change these values based on progress
+                    progressTimeCpu = cpuDelay*progress;  //multiply by progress
+                    cpuDelay = cpuDelay*(1-progress);  //multiply by remaining
+                    realCpuDelay = cpuDelay;  //not sure it was necessary to add original_delay.  maybe this could've held this value.
+                    //now make a json description
+                    json_desc = batsim_tools::string_format(    "{"
+                                                                "\"type\": \"%s\","
+                                                                "\"cpu\":%f,"
+                                                                "\"real_cpu\":%f,"
+                                                                "\"original_cpu\":%f,"
+                                                                "\"com\":%f"
+                                                                "}", type.c_str(),cpuDelay,realCpuDelay,originalCpuDelay,com);
+                    //ok progressTimeCpu is an amount of flops, convert it to time first
+                    newWallTime = pair.second->walltime - (progressTimeCpu/this->_speed);
+                }
+                //Now we can set our profile
+                std::string name = pair.second->profile->name + "$";
+                newProfile = Profile::from_json(name,json_desc,"Invalid JSON profile - in checkpointing function");
+                newProfiles[newProfile->name]=newProfile;
+
+                /************************************    Write Out Job Data  ****************************************/
+
+                //set our normal job attributes
                     
                     f<<"\t\t{\n"
                         <<"\t\t\t"  << "\"id\":\""                  <<  pair.first.job_name()           <<"\""<<","<<std::endl
                         <<"\t\t\t"  << "\"subtime\":"               <<  submit                          <<","<<std::endl
-                        <<"\t\t\t"  << "\"state\":"                 <<  state                           <<","<<std::endl
+                        <<"\t\t\t"  << "\"res\":"                   <<  pair.second->requested_nb_res   <<","<<std::endl
+                        <<"\t\t\t"  << "\"cores\":"                 <<  pair.second->cores              <<","<<std::endl
+                        <<"\t\t\t"  << "\"walltime\":"              <<  newWallTime                     <<","<<std::endl
+                        <<"\t\t\t"  << "\"profile\":\""             <<  pair.first.job_name()           <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"checkpoint_interval\":"   <<  pair.second->checkpoint_interval<<","<<std::endl
+                        <<"\t\t\t"  << "\"dumptime\":"              <<  pair.second->dump_time          <<","<<std::endl
+                        <<"\t\t\t"  << "\"readtime\":"              <<  pair.second->read_time          <<","<<std::endl
+                        <<"\t\t\t"  << "\"future_allocation\":\""   <<  future_allocation               <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"purpose\":\""             <<  pair.second->purpose            <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"start\":"                 <<  pair.second->start              <<","<<std::endl;
+                //now set our added attributes
+
+                       f<<"\t\t\t"  << "\"state\":"                 <<  state                           <<","<<std::endl
                         <<"\t\t\t"  << "\"progress\":"              <<  progress                        <<","<<std::endl
                         <<"\t\t\t"  << "\"allocation\":\""          <<  allocation                      <<"\""<<","<<std::endl
-                        <<"\t\t\t"  << "\"requested_nb_res\":"      <<  pair.second->requested_nb_res   <<","<<std::endl
-                        <<"\t\t\t"  << "\"walltime\":"              <<  pair.second->walltime           <<","<<std::endl
-
-                        <<"\t\t\t"  << "\"batsim_metadata\":\""     <<  pair.second->batsim_metadata    <<"\""<<","<<std::endl
-                        <<"\t\t\t"  << "\"checkpoint_interval\":"   <<  pair.second->checkpoint_interval<<","<<std::endl
                         <<"\t\t\t"  << "\"consumed_energy\":"       <<  pair.second->consumed_energy    <<","<<std::endl
-                        <<"\t\t\t"  << "\"cores\":"                 <<  pair.second->cores              <<","<<std::endl
-                        <<"\t\t\t"  << "\"dump_time\":"             <<  pair.second->dump_time          <<","<<std::endl
-                        <<"\t\t\t"  << "\"future_allocation\":\""   <<  future_allocation               <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"jitter\":\""              <<  pair.second->jitter             <<"\""<<","<<std::endl
                         <<"\t\t\t"  << "\"metadata\":\""            <<  pair.second->metadata           <<"\""<<","<<std::endl
-                        <<"\t\t\t"  << "\"purpose\":\""             <<  pair.second->purpose            <<"\""<<","<<std::endl
-                        <<"\t\t\t"  << "\"read_time\":"             <<  pair.second->read_time          <<","<<std::endl
+                        <<"\t\t\t"  << "\"batsim_metadata\":\""     <<  pair.second->batsim_metadata    <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"submission_times\":\""    <<  submission_times                <<"\""<<","<<std::endl
                         <<"\t\t\t"  << "\"runtime\":"               <<  runtime                         <<","<<std::endl
-                        <<"\t\t\t"  << "\"start\":"                 <<  pair.second->start              <<","<<std::endl
                         <<"\t\t\t"  << "\"starting_time\":"         <<  pair.second->starting_time      <<std::endl;
-                     
+               
                 
+
             }
+            
+
           
             
         }
@@ -628,10 +789,12 @@ bool Workload::write_out_workload(const std::string filename,int nb_machines)
         //ok we close out the last job without a comma, then close out jobs array
          f<<"\t\t}\n"
          <<"\t],\n";
+        /*****************************************  Profiles Write Out *********************************/
         //now we do profiles, lets start it out
         f<<"\t\"profiles\":{\n";
         first=true;
-        for (auto profile_pair:this->profiles->profiles())
+        std::string name;
+        for (auto profile_pair:newProfiles)
         {
             if (profile_pair.second != nullptr)
             {
@@ -641,19 +804,44 @@ bool Workload::write_out_workload(const std::string filename,int nb_machines)
                 f<<",\n";
             }
             first=false;
+            name = profile_pair.first.substr(0,profile_pair.first.size()-1);
+            f<<"\t\t\""<<name<<"\":"<<  profile_pair.second->json_description;
+            }
             
-            f<<"\t\t\""<<profile_pair.first<<"\":"<<  profile_pair.second->json_description;
-            }    
+            
         }
         //ok we close out profiles dict and the rest
                 
             f<<"\t}\n"
         <<"}";
         f.close();
+        
+        /***************************************  Call Me Laters ****************************************/
+        //lets write out call_me_laters and other variables we may need
+
+        //first let's alter our _call_me_laters.  Get rid of keys below the clock time
+        auto gt_or_eq_to_now = this->context->call_me_laters.lower_bound(simgrid::s4u::Engine::get_clock());
+        this->context->call_me_laters.erase(this->context->call_me_laters.begin(),gt_or_eq_to_now);
+        filename = checkpoint_dir + "/batsim_variables.chkpt";
+        f.open(filename,std::ios_base::trunc);
+        if (f.is_open())
+        {
+            f<<"{\n"
+                <<"\t\"call_me_laters\":"<<batsim_tools::multimap_to_string(this->context->call_me_laters)<<std::endl
+            <<"}";
+            f.close();
+        }
+        else //we apparently wrote the workload.json file, but couldn't write the call me laters
+            return false;
+
+        //we succeeded, lets return that.
         return true;
     }
-    else
+    else  //we couldn't even open up the workload.json, return we did not succeed 
+    {
         return false;
+    }
+    
     
 }
 
