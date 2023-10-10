@@ -59,6 +59,13 @@
 #include "server.hpp"
 #include "workload.hpp"
 #include "workflow.hpp"
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 
 #include "docopt/docopt.h"
@@ -256,8 +263,6 @@ Checkpoint Batsim options:
   --start-from-checkpoint <int>      Will start batsim from checkpoint #.
                                      Numbers go back in time...so 1 is the latest, 2 is the second latest
                                      [default: -1]
-  
-
 Platform size limit options:
   --mmax <nb>                        Limits the number of machines to <nb>.
                                      0 means no limit [default: 0].
@@ -511,6 +516,62 @@ Reservation Options:
    std::string copy = args["--copy"].asString();
    std::string submission_time_after = args["--submission-time-after"].asString();
    std::string submission_time_before = args["--submission-time-before"].asString();
+   //make a new expe-out
+   bool workload_set = false; 
+   if (main_args.start_from_checkpoint != -1 && !(args["--dump-execution-context"].asBool()))
+   {
+     //start by making a temp directory
+     std::string export_prefix = args["--export"].asString(); 
+     std::string prefix = export_prefix.substr(0,export_prefix.size()-4);
+     //std::cout<<"export prefix: "<<main_args.export_prefix<<std::endl;
+     //std::cout<<"prefix: "<<prefix<<std::endl;
+     std::string parent = prefix.substr(0,prefix.size()-9);
+     std::string checkpoint_dir = prefix+"/checkpoint_"+std::to_string(main_args.start_from_checkpoint);
+     std::string tempfolder = prefix + "/temp";
+     //std::cout<<"tempfolder: "<<tempfolder<<std::endl;
+     fs::create_directories(tempfolder);
+     fs::create_directories(tempfolder + "/start_from_checkpoint");
+     fs::create_directories(tempfolder + "/log");
+     fs::create_directories(tempfolder + "/cmd");
+     std::string from = checkpoint_dir + "/out_jobs.csv";
+     std::string to = tempfolder + "/out_jobs.csv";
+     fs::copy_file(from,to);
+     from = checkpoint_dir + "/batsim_variables.chkpt";
+     to = tempfolder + "/start_from_checkpoint/batsim_variables.chkpt";
+     fs::copy_file(from,to);
+     from = checkpoint_dir + "/batsched_variables.chkpt";
+     to = tempfolder + "/start_from_checkpoint/batsched_variables.chkpt";
+     fs::copy_file(from,to);
+     from = checkpoint_dir + "/batsched_schedule.chkpt";
+     to = tempfolder + "/start_from_checkpoint/batsched_schedule.chkpt";
+     fs::copy_file(from,to);
+     from = checkpoint_dir + "/batsched_queues.chkpt";
+     to = tempfolder + "/start_from_checkpoint/batsched_queues.chkpt";
+     fs::copy_file(from,to);
+     from = checkpoint_dir + "/workload.json";
+     to = tempfolder + "/start_from_checkpoint/workload.json";
+     fs::copy_file(from,to);
+     from = prefix + "/cmd/sched.bash";
+     to = tempfolder + "/cmd/sched.bash";
+     fs::copy_file(from,to);
+     from = prefix + "/cmd/batsim.bash";
+     to = tempfolder + "/cmd/batsim.bash";
+     fs::copy_file(from,to);
+     from = prefix;
+     to = parent + "/old_expe-out";
+     fs::rename(from,to);
+     from = to + "/temp";
+     to = prefix;
+     fs::rename(from,to);
+     MainArguments::WorkloadDescription desc;
+     desc.filename = absolute_filename(prefix + "/start_from_checkpoint/workload.json");
+     desc.name = string("w0");
+     XBT_INFO("Workload '%s' corresponds to workload file '%s'.",
+               desc.name.c_str(), desc.filename.c_str());
+     main_args.workload_descriptions.push_back(desc);
+     workload_set = true;
+
+   }
 
 
    if (main_args.chkpt_interval.raw != "False")
@@ -742,25 +803,28 @@ Reservation Options:
     }
 
     // Workloads
-    vector<string> workload_files = args["--workload"].asStringList();
-    for (size_t i = 0; i < workload_files.size(); i++)
+    if (!workload_set)
     {
-        const string & workload_file = workload_files[i];
-        if (!file_exists(workload_file))
+        vector<string> workload_files = args["--workload"].asStringList();
+        for (size_t i = 0; i < workload_files.size(); i++)
         {
-            XBT_ERROR("Workload file '%s' cannot be read.", workload_file.c_str());
-            error = true;
-            return_code |= 0x02;
-        }
-        else
-        {
-            MainArguments::WorkloadDescription desc;
-            desc.filename = absolute_filename(workload_file);
-            desc.name = string("w") + to_string(i);
+            const string & workload_file = workload_files[i];
+            if (!file_exists(workload_file))
+            {
+                XBT_ERROR("Workload file '%s' cannot be read.", workload_file.c_str());
+                error = true;
+                return_code |= 0x02;
+            }
+            else
+            {
+                MainArguments::WorkloadDescription desc;
+                desc.filename = absolute_filename(workload_file);
+                desc.name = string("w") + to_string(i);
 
-            XBT_INFO("Workload '%s' corresponds to workload file '%s'.",
-                     desc.name.c_str(), desc.filename.c_str());
-            main_args.workload_descriptions.push_back(desc);
+                XBT_INFO("Workload '%s' corresponds to workload file '%s'.",
+                        desc.name.c_str(), desc.filename.c_str());
+                main_args.workload_descriptions.push_back(desc);
+            }
         }
     }
 
@@ -1294,6 +1358,8 @@ int main(int argc, char * argv[])
     }
 
     // Let's create the BatsimContext, which stores information about the current instance
+    // CCU-LANL we just set values here, we wait to do the config description that gets sent to the
+    //scheduler until after workloads are read in
     BatsimContext context;
     set_configuration(&context, main_args);
     //CCU-LANL ADDITION
@@ -1329,6 +1395,11 @@ int main(int argc, char * argv[])
 
     // Let's load the eventLists
     load_eventLists(main_args, &context);
+
+    //CCU-LANL let's wait to set configuration until after workloads are loaded
+    //here seems good
+    write_to_config(&context,main_args);
+    
 
    
 
@@ -1448,7 +1519,12 @@ void set_configuration(BatsimContext *context,
     context->batsim_checkpoint_interval = main_args.chkpt_interval;
     context->start_from_checkpoint.started_from_checkpoint= (main_args.start_from_checkpoint == -1) ? false : true;
     context->start_from_checkpoint.nb_folder = main_args.start_from_checkpoint;
+}
+void write_to_config(BatsimContext *context,
+                     MainArguments & main_args)
+{
 
+    using namespace rapidjson;
     // **************************************************************************************
     // Let's write the json object holding configuration information to send to the scheduler
     // **************************************************************************************

@@ -1012,10 +1012,13 @@ void JobsTracer::initialize(BatsimContext *context,
         "metadata",//*
         "batsim_metadata"//*
     };
-    string header = boost::algorithm::join(_job_keys, ",") + "\n";
-    _row_content.reserve(_job_keys.size());
-    _wbuf->append_text(header.c_str());
-    _wbuf->flush_buffer();
+    if (!append)
+    {
+        string header = boost::algorithm::join(_job_keys, ",") + "\n";
+        _row_content.reserve(_job_keys.size());
+        _wbuf->append_text(header.c_str());
+        _wbuf->flush_buffer();
+    }
 
     // Prepare for schedule output file
     for (int i = 0; i < static_cast<int>(context->machines.nb_machines()); ++i)

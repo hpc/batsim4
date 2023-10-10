@@ -522,10 +522,11 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         j->id = JobIdentifier(job_id_str);
     }
     //CCU-LANL Additions
-    //if we are starting from a checkpoint lets add things to a job's attributes now
+    //if we are starting from a checkpoint lets add things to a job's attributes 
+    j->checkpoint_job_data = new batsim_tools::checkpoint_job_data();
     if (workload->context->start_from_checkpoint.started_from_checkpoint)
     {
-        j->checkpoint_job_data = new batsim_tools::checkpoint_job_data();
+        
         xbt_assert(json_desc.HasMember("allocation"), "%s: job '%s' has no 'allocation' field"
         ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
         j->checkpoint_job_data->allocation = json_desc["allocation"].GetString();

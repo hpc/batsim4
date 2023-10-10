@@ -168,6 +168,20 @@ std::string to_string(std::pair<K,V> pair)
     return ourString;
     }
     template<typename T>
+    std::string vector_to_unquoted_string(std::vector<T> &v)
+    {
+        std::string ourString="[";
+        bool first = true;
+    for (T value:v)
+    {
+        if (!first)
+          ourString = ourString + ", ";  first=false;
+        ourString = ourString +  batsim_tools::to_string(value);
+    }
+    ourString = ourString + "]";
+    return ourString;
+    }
+    template<typename T>
     std::string vector_to_string(std::vector<T> *v)
     {
         std::string ourString="[";

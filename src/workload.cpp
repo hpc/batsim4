@@ -663,7 +663,7 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                 running = false;
                 progress = 0;
                 submit = 0;
-                std::string submission_times = batsim_tools::vector_to_string(pair.second->submission_times);
+                std::string submission_times = batsim_tools::vector_to_unquoted_string(pair.second->submission_times);
                 
                 state = static_cast<int>(pair.second->state);
                 runtime=0;
@@ -684,7 +684,10 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                 }
                 else
                 {
-                    submit = pair.second->submission_time;
+                    if (pair.second->submission_time > now)
+                        submit = pair.second->submission_time;
+                    else
+                        submit = now;
                     progress = 0;
                     allocation = "null";
     
@@ -773,9 +776,10 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                         <<"\t\t\t"  << "\"jitter\":\""              <<  pair.second->jitter             <<"\""<<","<<std::endl
                         <<"\t\t\t"  << "\"metadata\":\""            <<  pair.second->metadata           <<"\""<<","<<std::endl
                         <<"\t\t\t"  << "\"batsim_metadata\":\""     <<  pair.second->batsim_metadata    <<"\""<<","<<std::endl
-                        <<"\t\t\t"  << "\"submission_times\":\""    <<  submission_times                <<"\""<<","<<std::endl
+                        <<"\t\t\t"  << "\"submission_times\":"      <<  submission_times                <<","<<std::endl
                         <<"\t\t\t"  << "\"runtime\":"               <<  runtime                         <<","<<std::endl
                         <<"\t\t\t"  << "\"starting_time\":"         <<  pair.second->starting_time      <<std::endl;
+                        //<<"\t\t\t"  << "\"original_start\":"
                
                 
 

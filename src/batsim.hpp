@@ -238,3 +238,5 @@ void start_initial_simulation_processes(const MainArguments & main_args,
  */
 void set_configuration(BatsimContext * context,
                        MainArguments & main_args);
+void write_to_config(BatsimContext * context,
+                     MainArguments & main_args);

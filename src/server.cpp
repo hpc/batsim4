@@ -359,10 +359,14 @@ void server_on_job_submitted(ServerData * data,
 
         if (!data->context->redis_enabled)
         {
+            XBT_INFO("before json description");
             job_json_description = job->json_description;
+            XBT_INFO("after json description");
             if (data->context->submission_forward_profiles)
             {
+                XBT_INFO("before profile json");
                 profile_json_description = job->profile->json_description;
+                XBT_INFO("after profile_json");
             }
         }
 
@@ -370,6 +374,7 @@ void server_on_job_submitted(ServerData * data,
                                                           job_json_description,
                                                           profile_json_description,
                                                           simgrid::s4u::Engine::get_clock());
+        XBT_INFO("after append");
     }
 }
 
@@ -1002,7 +1007,7 @@ void server_on_call_me_later(ServerData * data,
 {
     xbt_assert(task_data->data != nullptr, "inconsistency: task_data has null data");
     auto * message = static_cast<CallMeLaterMessage *>(task_data->data);
-    double epsilon=1e-9;
+    double epsilon=1e-4;
     double difference = message->target_time+epsilon - double(simgrid::s4u::Engine::get_clock());
     xbt_assert(difference >= 0,
                "You asked to be awaken in the past! (you ask: %f, it is: %f,diff: %f)",

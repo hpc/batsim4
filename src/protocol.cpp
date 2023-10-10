@@ -310,16 +310,24 @@ void JsonProtocolWriter::append_job_submitted(const string & job_id,
         batsim_tools::job_parts parts = batsim_tools::get_job_parts(job_id);
         JobPtr job = _context->workloads.at(parts.workload)->jobs->at(JobIdentifier( job_id ));
         
-
+        XBT_INFO("before chkpt data");
         Value checkpoint_job_data(rapidjson::kObjectType);
+        XBT_INFO("durring chkpt data");
         checkpoint_job_data.AddMember("allocation",Value().SetString(job->checkpoint_job_data->allocation.c_str(),_alloc),_alloc);
+        XBT_INFO("durring chkpt data");
         checkpoint_job_data.AddMember("consumed_energy",Value().SetString(batsim_tools::to_string<double>(double(job->checkpoint_job_data->consumed_energy)).c_str(),_alloc),_alloc);
+        XBT_INFO("durring chkpt data");
         checkpoint_job_data.AddMember("jitter",Value().SetString(job->checkpoint_job_data->jitter.c_str(),_alloc),_alloc);
+        XBT_INFO("durring chkpt data");
         checkpoint_job_data.AddMember("progress",Value().SetString(batsim_tools::to_string(job->checkpoint_job_data->progress).c_str(),_alloc),_alloc);
+        XBT_INFO("durring chkpt data");
         checkpoint_job_data.AddMember("state",Value().SetInt(job->checkpoint_job_data->state),_alloc);
+        XBT_INFO("durring chkpt data");
         job_data.AddMember("checkpoint_job_data",checkpoint_job_data,_alloc);
+        XBT_INFO("durring chkpt data");
 
         data.AddMember("job", job_data, _alloc);
+        XBT_INFO("durring chkpt data");
 
 
         if (_context->submission_forward_profiles)
