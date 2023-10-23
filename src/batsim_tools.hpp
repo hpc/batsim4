@@ -49,9 +49,13 @@ namespace batsim_tools{
     struct checkpoint_job_data{
       int state = -1;
       double progress = -1;
+      double progressTimeCpu = 0;
       std::string allocation = "null";
       long double consumed_energy = -1.0;
       std::string jitter = "null";
+      double runtime = 0;
+      double original_start=-1.0;
+      double original_submit=-1.0;
 
     };
     struct job_parts{

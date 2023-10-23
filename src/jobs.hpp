@@ -250,6 +250,7 @@ struct Job
     ProfilePtr profile; //!< A pointer to the job profile. The profile tells how the job should be computed
     long double submission_time; //!< The job submission time: The time at which the becomes available
     long double walltime = -1; //!< The job walltime: if the job is executed for more than this amount of time, it will be killed. Set at -1 to disable this behavior
+    long double original_walltime = -1; //!< used for checkpointing-batsim
     unsigned int requested_nb_res; //!< The number of resources the job is requested to be executed on
     int return_code = -1; //!< The return code of the job
     

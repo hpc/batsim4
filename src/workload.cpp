@@ -639,12 +639,15 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
         std::string type;
         double newWallTime;
         double progressTimeCpu;
+        double newProgressTimeCpu;
         double cpuDelay;
         double realCpuDelay;
         double originalCpuDelay;
         double com;
+        double original_walltime;
         std::string json_desc;
         
+
 
         
         /*******************************   Print Out Jobs ***************************/
@@ -669,6 +672,7 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                 runtime=0;
                 
                 future_allocation=pair.second->future_allocation.to_string_hyphen();
+                original_walltime = pair.second->original_walltime == -1.0 ? pair.second->walltime : pair.second->original_walltime;
 
                 
                 
@@ -679,7 +683,7 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     progress = pair.second->compute_job_progress()->current_task_progress_ratio; //progress is the amount that has been done, not remaining
                                                                                                  //do (1-progress) to get amount remaining
                     allocation = pair.second->allocation.to_string_hyphen();
-                    runtime = now - pair.second->starting_time;
+                    runtime = (now - pair.second->starting_time)+pair.second->checkpoint_job_data->runtime;
                     
                 }
                 else
@@ -704,12 +708,12 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     type = "delay";
                     cpuDelay = data->delay;
                     realCpuDelay = data->real_delay;
-                    originalCpuDelay = data->original_delay;
+                    originalCpuDelay = data->real_delay;
                     
                     //now lets change these values based on progress
                     progressTimeCpu = cpuDelay*progress; //multiply by progress
+                    newProgressTimeCpu = progressTimeCpu + pair.second->checkpoint_job_data->progressTimeCpu;
                     cpuDelay = cpuDelay*(1-progress);  //multiply by remaining
-                    realCpuDelay = cpuDelay;  //not sure it was necessary to add original_delay.  maybe this could've held this value.
                     //now make a json description
                     json_desc = batsim_tools::string_format(    "{"
                                                                 "\"type\": \"%s\","
@@ -728,12 +732,12 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     type = "parallel_homogeneous";
                     cpuDelay = data->cpu;
                     realCpuDelay = data->real_cpu;
-                    originalCpuDelay = data->original_cpu;
+                    originalCpuDelay = data->real_cpu;
                     com = data->com;
                     //now lets change these values based on progress
                     progressTimeCpu = cpuDelay*progress;  //multiply by progress
+                    newProgressTimeCpu = progressTimeCpu + pair.second->checkpoint_job_data->progressTimeCpu;
                     cpuDelay = cpuDelay*(1-progress);  //multiply by remaining
-                    realCpuDelay = cpuDelay;  //not sure it was necessary to add original_delay.  maybe this could've held this value.
                     //now make a json description
                     json_desc = batsim_tools::string_format(    "{"
                                                                 "\"type\": \"%s\","
@@ -751,7 +755,11 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                 newProfiles[newProfile->name]=newProfile;
 
                 /************************************    Write Out Job Data  ****************************************/
-
+                //original_start gets set if there was a previous one, otherwise it is -1.0
+                double original_start = pair.second->checkpoint_job_data->original_start;
+                if (original_start == -1.0)
+                    original_start = pair.second->starting_time;//we set it to the new starting time which may be -1.0 if not started
+                double original_submit= pair.second->checkpoint_job_data->original_submit; //however, this value will always be set
                 //set our normal job attributes
                     
                     f<<"\t\t{\n"
@@ -778,8 +786,12 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                         <<"\t\t\t"  << "\"batsim_metadata\":\""     <<  pair.second->batsim_metadata    <<"\""<<","<<std::endl
                         <<"\t\t\t"  << "\"submission_times\":"      <<  submission_times                <<","<<std::endl
                         <<"\t\t\t"  << "\"runtime\":"               <<  runtime                         <<","<<std::endl
-                        <<"\t\t\t"  << "\"starting_time\":"         <<  pair.second->starting_time      <<std::endl;
-                        //<<"\t\t\t"  << "\"original_start\":"
+                        <<"\t\t\t"  << "\"progressTimeCpu\":"       <<  newProgressTimeCpu                 <<","<<std::endl
+                        <<"\t\t\t"  << "\"starting_time\":"         <<  pair.second->starting_time      <<","<<std::endl
+                        <<"\t\t\t"  << "\"original_walltime\":"     <<  original_walltime               <<","<<std::endl
+                        <<"\t\t\t"  << "\"original_start\":"        <<  original_start                  <<","<<std::endl
+                        <<"\t\t\t"  << "\"original_submit\":"       <<  original_submit                 <<std::endl;
+
                
                 
 

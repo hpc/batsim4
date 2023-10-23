@@ -120,7 +120,11 @@ struct ParallelHomogeneousProfileData
     //CCU-LANL Additions
     double real_cpu=0; //!< The computation amount on each node (forward work)
     double original_cpu=-1.0;  //!< for use with checkpointing-batsim.  cpu and real_cpu correspond to flops for this simulation.
-                             //!< while original_cpu corresponds to the original real_cpu, not changed by batsim-checkpoints or job-checkpoints
+                             //!< while original_cpu corresponds to the original cpu, not changed by batsim-checkpoints
+    double original_real_cpu=-1.0; //!< for use with checkpointing batsim. 
+                                //!< this corresponds to the original cpu not changed by batsim-checkpoints or job checkpoints
+
+    
 };
 
 /**
@@ -146,8 +150,9 @@ struct DelayProfileData
     //CCU-LANL Additions
     double real_delay=0; //!< The time amount that is the actual amount of forward work that is supposed to take place when checkpointing_on
     double original_delay=-1.0; //!< for use with checkpointing-batsim.  delay and real_delay correspond to times for this simulation.
-                             //!< while original_delay corresponds to the original real_delay, not changed by batsim-checkpoints or job-checkpoints
-};
+                             //!< while original_delay corresponds to the original delay, not changed by batsim-checkpoints
+    double original_real_delay = -1.0;
+};                              //!< corresponds to the original_real_delay, not changed by batsim-checkpoints or job-checkpoints
 
 /**
  * @brief The data associated to SMPI profiles

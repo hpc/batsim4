@@ -71,6 +71,7 @@ public:
      * @brief Write the current content of the buffer into the file
      */
     void flush_buffer();
+    void close_and_reopen(BatsimContext * context);
 
 private:
     std::ofstream f;            //!< The file stream on which the buffer is outputted
@@ -492,6 +493,8 @@ public:
      * @brief Flushes the pending writings to the jobs output file
      */
     void flush();
+
+    void flush_close_reopen();
 
     /**
      * @brief Closes the jobs output buffer

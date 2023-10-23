@@ -230,6 +230,8 @@ Output options:
                                      all: every change to the schedule is made into an svg
                                      short: every loop through make_decisions is made into an svg
                                      [default: none]
+  --output-svg-method <string>       Output schedule as (svg || text || both)
+                                     [default: svg]
   --svg-frame-start <INT>            What frame number to start outputing svgs
                                      [default: 1]
   --svg-frame-end <INT>              What frame number to end outputing svgs
@@ -496,6 +498,7 @@ Reservation Options:
   
    main_args.reschedule_policy = args["--reschedule-policy"].asString();
    main_args.output_svg = args["--output-svg"].asString();
+   main_args.output_svg_method = args["--output-svg-method"].asString();
    main_args.impact_policy = args["--impact-policy"].asString();
    main_args.subtract_progress_from_walltime = args["--subtract-progress-from-walltime"].asBool();
    main_args.svg_frame_start = args["--svg-frame-start"].asLong();
@@ -520,9 +523,10 @@ Reservation Options:
    bool workload_set = false; 
    if (main_args.start_from_checkpoint != -1 && !(args["--dump-execution-context"].asBool()))
    {
-     //start by making a temp directory
+          
      std::string export_prefix = args["--export"].asString(); 
      std::string prefix = export_prefix.substr(0,export_prefix.size()-4);
+     /*   We moved all this stuff to real_start.py ,calling start_from_checkpoint.py's move_output_folder()
      //std::cout<<"export prefix: "<<main_args.export_prefix<<std::endl;
      //std::cout<<"prefix: "<<prefix<<std::endl;
      std::string parent = prefix.substr(0,prefix.size()-9);
@@ -536,9 +540,10 @@ Reservation Options:
      std::string from = checkpoint_dir + "/out_jobs.csv";
      std::string to = tempfolder + "/out_jobs.csv";
      fs::copy_file(from,to);
-     from = checkpoint_dir + "/batsim_variables.chkpt";
-     to = tempfolder + "/start_from_checkpoint/batsim_variables.chkpt";
-     fs::copy_file(from,to);
+     from = checkpoint_dir;
+     to = tempfolder + "/start_from_checkpoint";
+     fs::copy_file(from,to,fs::copy_options::recursive);
+     /*
      from = checkpoint_dir + "/batsched_variables.chkpt";
      to = tempfolder + "/start_from_checkpoint/batsched_variables.chkpt";
      fs::copy_file(from,to);
@@ -550,6 +555,7 @@ Reservation Options:
      fs::copy_file(from,to);
      from = checkpoint_dir + "/workload.json";
      to = tempfolder + "/start_from_checkpoint/workload.json";
+     
      fs::copy_file(from,to);
      from = prefix + "/cmd/sched.bash";
      to = tempfolder + "/cmd/sched.bash";
@@ -563,6 +569,7 @@ Reservation Options:
      from = to + "/temp";
      to = prefix;
      fs::rename(from,to);
+     */
      MainArguments::WorkloadDescription desc;
      desc.filename = absolute_filename(prefix + "/start_from_checkpoint/workload.json");
      desc.name = string("w0");
@@ -1562,6 +1569,7 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("core-percent", Value().SetDouble(main_args.core_percent),alloc);
     context->config_json.AddMember("reschedule-policy",Value().SetString(main_args.reschedule_policy.c_str(),alloc),alloc);
     context->config_json.AddMember("output-svg",Value().SetString(main_args.output_svg.c_str(),alloc),alloc);
+    context->config_json.AddMember("output-svg-method",Value().SetString(main_args.output_svg_method.c_str(),alloc),alloc);
     context->config_json.AddMember("impact-policy",Value().SetString(main_args.impact_policy.c_str(),alloc),alloc);
     context->config_json.AddMember("repair-time-file",Value().SetString(main_args.repair_time_file.c_str(),alloc),alloc);
     context->config_json.AddMember("scheduler-queue-depth",Value().SetInt((int)main_args.scheduler_queue_depth),alloc);

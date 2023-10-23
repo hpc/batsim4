@@ -332,6 +332,12 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
                    error_prefix.c_str(), profile_name.c_str());
             data->original_delay = json_desc["original_delay"].GetDouble();
         }
+        if(json_desc.HasMember("original_real_delay"))
+        {
+            xbt_assert(json_desc["original_real_delay"].IsNumber(), "%s: profile '%s' has a non-number 'original_real_delay' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->original_real_delay = json_desc["original_real_delay"].GetDouble();
+        }
         if(json_desc.HasMember("real_delay"))
         {
             xbt_assert(json_desc["real_delay"].IsNumber(), "%s: profile '%s' has a non-number 'real_delay' field",
@@ -430,6 +436,12 @@ ProfilePtr Profile::from_json(const std::string & profile_name,
             xbt_assert(json_desc["original_cpu"].IsNumber(), "%s: profile '%s' has a non-number 'original_cpu' field",
                    error_prefix.c_str(), profile_name.c_str());
             data->original_cpu = json_desc["original_cpu"].GetDouble();
+        }
+        if(json_desc.HasMember("original_real_cpu"))
+        {
+            xbt_assert(json_desc["original_real_cpu"].IsNumber(), "%s: profile '%s' has a non-number 'original_real_cpu' field",
+                   error_prefix.c_str(), profile_name.c_str());
+            data->original_real_cpu = json_desc["original_real_cpu"].GetDouble();
         }
         if(json_desc.HasMember("real_cpu"))
         {

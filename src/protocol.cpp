@@ -309,7 +309,15 @@ void JsonProtocolWriter::append_job_submitted(const string & job_id,
         Value & job_data = Value().CopyFrom(job_description_doc,_alloc);
         batsim_tools::job_parts parts = batsim_tools::get_job_parts(job_id);
         JobPtr job = _context->workloads.at(parts.workload)->jobs->at(JobIdentifier( job_id ));
-        
+        //both original_submit and start should be -1.0 if it wasn't in the workload file (not started from a checkpoint)
+        if (!job_data.HasMember("original_submit"))
+          job_data.AddMember("original_submit",Value().SetDouble(job->checkpoint_job_data->original_submit),_alloc);
+        if (!job_data.HasMember("original_start"))
+          job_data.AddMember("original_start",Value().SetDouble(job->checkpoint_job_data->original_start),_alloc);
+        if (!job_data.HasMember("original_walltime"))
+          job_data.AddMember("original_walltime",Value().SetDouble(double(job->original_walltime)),_alloc);
+
+
         XBT_INFO("before chkpt data");
         Value checkpoint_job_data(rapidjson::kObjectType);
         XBT_INFO("durring chkpt data");
@@ -322,6 +330,8 @@ void JsonProtocolWriter::append_job_submitted(const string & job_id,
         checkpoint_job_data.AddMember("progress",Value().SetString(batsim_tools::to_string(job->checkpoint_job_data->progress).c_str(),_alloc),_alloc);
         XBT_INFO("durring chkpt data");
         checkpoint_job_data.AddMember("state",Value().SetInt(job->checkpoint_job_data->state),_alloc);
+        checkpoint_job_data.AddMember("runtime",Value().SetString(batsim_tools::to_string(job->checkpoint_job_data->runtime).c_str(),_alloc),_alloc);
+        checkpoint_job_data.AddMember("progressTimeCpu",Value().SetString(batsim_tools::to_string(job->checkpoint_job_data->progressTimeCpu).c_str(),_alloc),_alloc);
         XBT_INFO("durring chkpt data");
         job_data.AddMember("checkpoint_job_data",checkpoint_job_data,_alloc);
         XBT_INFO("durring chkpt data");
@@ -1541,7 +1551,7 @@ void JsonProtocolReader::handle_notify(int event_number,
       fs::create_directories(checkpoint_dir);
      
       //flush the out_jobs.csv file before saving it
-      context->jobs_tracer.flush();
+      context->jobs_tracer.flush_close_reopen();
       if (fs::exists(prefix+"/out_jobs.csv"))
         fs::copy_file(prefix+"/out_jobs.csv",checkpoint_dir+"/out_jobs.csv",fs::copy_options::overwrite_existing);
       Workload * w0 = context->workloads["w0"];
@@ -1553,6 +1563,16 @@ void JsonProtocolReader::handle_notify(int event_number,
         
         message->target_time = simgrid::s4u::Engine::get_clock();
         message->forWhat = static_cast<int>(batsim_tools::call_me_later_types::CHECKPOINT_BATSCHED);
+        message->id = 1; //this value doesn't really matter.  If the frequency of checkpoints was high, it may matter.
+        send_message_at_time(timestamp, "server", IPMessageType::SCHED_CALL_ME_LATER, static_cast<void*>(message));
+    }
+    else if (notify_type == "recover_from_checkpoint")
+    {
+      auto * message = new CallMeLaterMessage;
+
+        
+        message->target_time = simgrid::s4u::Engine::get_clock();
+        message->forWhat = static_cast<int>(batsim_tools::call_me_later_types::RECOVER_FROM_CHECKPOINT);
         message->id = 1; //this value doesn't really matter.  If the frequency of checkpoints was high, it may matter.
         send_message_at_time(timestamp, "server", IPMessageType::SCHED_CALL_ME_LATER, static_cast<void*>(message));
     }

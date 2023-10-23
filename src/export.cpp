@@ -124,6 +124,11 @@ WriteBuffer::WriteBuffer(const std::string & filename, size_t buffer_size,bool a
         f.open(filename, ios_base::trunc);
     xbt_assert(f.is_open(), "Cannot write file '%s'", filename.c_str());
 }
+void WriteBuffer::close_and_reopen(BatsimContext * context)
+{
+    f.close();
+    f.open(context->export_prefix + "_jobs.csv",ios_base::app);
+}
 
 WriteBuffer::~WriteBuffer()
 {
@@ -991,6 +996,8 @@ void JobsTracer::initialize(BatsimContext *context,
         "execution_time",
         "finish_time",
         "waiting_time",
+        "original_start",
+        "original_submit",
         "turnaround_time",
         "stretch",
         "allocated_resources",
@@ -1008,6 +1015,7 @@ void JobsTracer::initialize(BatsimContext *context,
         "real_delay",//*
         "cpu",//*
         "real_cpu",//*
+        "progressTimeCpu",//*
         "consumed_energy",
         "metadata",//*
         "batsim_metadata"//*
@@ -1304,7 +1312,9 @@ void JobsTracer::write_job(const JobPtr job)
     _job_map["fixed-failures"] = job->workload->_fixed_failures == -1 ? "" : to_string(static_cast<double>(job->workload->_fixed_failures));
     _job_map["repair-time"]=to_string(static_cast<double>(job->workload->_repair_time));
     _job_map["jitter"]=job->jitter;
-    
+    _job_map["original_start"] = to_string(static_cast<double>(job->checkpoint_job_data->original_start));
+    _job_map["original_submit"] = to_string(static_cast<double>(job->checkpoint_job_data->original_submit));
+    _job_map["progressTimeCpu"] = to_string(static_cast<double>(job->checkpoint_job_data->progressTimeCpu));
     _job_map["Tc_Error"]=job->workload->_compute_checkpointing == false  ? "" : to_string(static_cast<double>(job->workload->_compute_checkpointing_error));
     switch (job->profile->type){
             case ProfileType::DELAY:
@@ -1355,7 +1365,13 @@ void JobsTracer::write_job(const JobPtr job)
     _wbuf->append_text((boost::algorithm::join(_row_content, ",") + "\n").c_str());
     _row_content.clear();
 }
-
+void JobsTracer::flush_close_reopen()
+{
+    _wbuf->flush_buffer();
+    _wbuf->close_and_reopen(_context);
+                                    
+    
+}
 void JobsTracer::flush()
 {
     xbt_assert(_wbuf != nullptr, "wrong call: _wbuf is null");

@@ -521,39 +521,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     {
         j->id = JobIdentifier(job_id_str);
     }
-    //CCU-LANL Additions
-    //if we are starting from a checkpoint lets add things to a job's attributes 
-    j->checkpoint_job_data = new batsim_tools::checkpoint_job_data();
-    if (workload->context->start_from_checkpoint.started_from_checkpoint)
-    {
-        
-        xbt_assert(json_desc.HasMember("allocation"), "%s: job '%s' has no 'allocation' field"
-        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
-        j->checkpoint_job_data->allocation = json_desc["allocation"].GetString();
-        
-        xbt_assert(json_desc.HasMember("progress"), "%s: job '%s' has no 'progress' field"
-        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
-        j->checkpoint_job_data->progress = json_desc["progress"].GetDouble();
-
-        xbt_assert(json_desc.HasMember("state"), "%s: job '%s' has no 'state' field"
-        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
-        j->checkpoint_job_data->state = json_desc["state"].GetInt();
-
-        xbt_assert(json_desc.HasMember("metadata"), "%s: job '%s' has no 'metadata' field"
-        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
-        j->metadata = json_desc["metadata"].GetString();
-
-        xbt_assert(json_desc.HasMember("batsim_metadata"), "%s: job '%s' has no 'batsim_metadata' field"
-        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
-        j->batsim_metadata = json_desc["batsim_metadata"].GetString();
-
-        xbt_assert(json_desc.HasMember("jitter"), "%s: job '%s' has no 'jitter' field"
-        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
-        j->jitter = json_desc["jitter"].GetString();
-    }
-
-
-
+    
     // Get submission time
     xbt_assert(json_desc.HasMember("subtime"), "%s: job '%s' has no 'subtime' field",
                error_prefix.c_str(), j->id.to_string().c_str());
@@ -590,6 +558,15 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                "%s: job '%s' has an invalid walltime (%Lg). It should either be -1 (no walltime) "
                "or a strictly positive number.",
                error_prefix.c_str(), j->id.to_string().c_str(), j->walltime);
+    // Get walltime (optional)
+    if (json_desc.HasMember("original_walltime"))
+    {
+        xbt_assert(json_desc["original_walltime"].IsNumber(), "%s: job %s has a non-number 'original_walltime' field",
+                   error_prefix.c_str(), j->id.to_string().c_str());
+        j->original_walltime = static_cast<long double>(json_desc["original_walltime"].GetDouble());
+    }
+    
+    
 
     // Get number of requested resources
     xbt_assert(json_desc.HasMember("res"), "%s: job %s has no 'res' field",
@@ -653,6 +630,59 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                     error_prefix.c_str(), j->id.to_string().c_str());
         std::string myAlloc = json_desc["alloc"].GetString();
         j->future_allocation = IntervalSet::from_string_hyphen(myAlloc," ","-");
+    }
+    //CCU-LANL Additions
+    //if we are starting from a checkpoint lets add things to a job's attributes 
+    j->checkpoint_job_data = new batsim_tools::checkpoint_job_data();
+    if (workload->context->start_from_checkpoint.started_from_checkpoint)
+    {
+        
+        xbt_assert(json_desc.HasMember("allocation"), "%s: job '%s' has no 'allocation' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->allocation = json_desc["allocation"].GetString();
+        
+        xbt_assert(json_desc.HasMember("progress"), "%s: job '%s' has no 'progress' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->progress = json_desc["progress"].GetDouble();
+
+        xbt_assert(json_desc.HasMember("state"), "%s: job '%s' has no 'state' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->state = json_desc["state"].GetInt();
+
+        xbt_assert(json_desc.HasMember("metadata"), "%s: job '%s' has no 'metadata' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->metadata = json_desc["metadata"].GetString();
+
+        xbt_assert(json_desc.HasMember("batsim_metadata"), "%s: job '%s' has no 'batsim_metadata' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->batsim_metadata = json_desc["batsim_metadata"].GetString();
+
+        xbt_assert(json_desc.HasMember("jitter"), "%s: job '%s' has no 'jitter' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->jitter = json_desc["jitter"].GetString();
+
+        xbt_assert(json_desc.HasMember("original_start"),"%s: job '%s' has no 'original_start' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->original_start = json_desc["original_start"].GetDouble();
+        
+        xbt_assert(json_desc.HasMember("original_submit"),"%s: job '%s' has no 'original_submit' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->original_submit = json_desc["original_submit"].GetDouble();
+
+        xbt_assert(json_desc.HasMember("runtime"),"%s: job '%s' has no 'runtime' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->runtime = json_desc["runtime"].GetDouble();
+
+        xbt_assert(json_desc.HasMember("progressTimeCpu"),"%s: job '%s' has no 'progressTimeCpu' field"
+        ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
+        j->checkpoint_job_data->progressTimeCpu = json_desc["progressTimeCpu"].GetDouble();
+
+        
+    }
+    else
+    {
+        //we still need to set the original submit
+        j->checkpoint_job_data->original_submit = j->submission_time;
     }
     
 

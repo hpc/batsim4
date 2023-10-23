@@ -165,6 +165,7 @@ struct MainArguments
     std::string reschedule_policy = "RESCHEDULE_AFFECTED";
     std::string impact_policy = "LEAST_KILLING_LARGEST_FIRST"; // kill largest jobs first, if needed, when reserving arbitrary nodes
     std::string output_svg = "none";
+    std::string output_svg_method = "svg";
     bool output_extra_info = true;
     long svg_frame_start = 1;
     long svg_frame_end = -1;
