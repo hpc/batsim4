@@ -643,6 +643,7 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
         double cpuDelay;
         double realCpuDelay;
         double originalCpuDelay;
+        double originalRealCpuDelay;
         double com;
         double original_walltime;
         std::string json_desc;
@@ -708,7 +709,8 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     type = "delay";
                     cpuDelay = data->delay;
                     realCpuDelay = data->real_delay;
-                    originalCpuDelay = data->real_delay;
+                    originalCpuDelay = data->original_delay == -1.0 ? data->delay : data->original_delay;
+                    originalRealCpuDelay = data->original_real_delay == -1.0 ? data->real_delay : data->original_real_delay;
                     
                     //now lets change these values based on progress
                     progressTimeCpu = cpuDelay*progress; //multiply by progress
@@ -719,8 +721,9 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                                                                 "\"type\": \"%s\","
                                                                 "\"delay\":%f,"
                                                                 "\"real_delay\":%f,"
-                                                                "\"original_delay\":%f"
-                                                                "}", type.c_str(),cpuDelay,realCpuDelay,originalCpuDelay);
+                                                                "\"original_delay\":%f,"
+                                                                "\"original_real_delay\":%f,"
+                                                                "}", type.c_str(),cpuDelay,realCpuDelay,originalCpuDelay,originalRealCpuDelay);
                     //ok progressTimeCpu is just a time                                                                
                     newWallTime = pair.second->walltime - progressTimeCpu; 
                     
@@ -732,7 +735,8 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     type = "parallel_homogeneous";
                     cpuDelay = data->cpu;
                     realCpuDelay = data->real_cpu;
-                    originalCpuDelay = data->real_cpu;
+                    originalCpuDelay = data->original_cpu == -1.0 ? data->cpu : data->original_cpu;
+                    originalRealCpuDelay = data->original_real_cpu == -1.0 ? data->real_cpu : data->original_real_cpu;
                     com = data->com;
                     //now lets change these values based on progress
                     progressTimeCpu = cpuDelay*progress;  //multiply by progress
@@ -744,8 +748,9 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                                                                 "\"cpu\":%f,"
                                                                 "\"real_cpu\":%f,"
                                                                 "\"original_cpu\":%f,"
+                                                                "\"original_real_cpu\":%f,"
                                                                 "\"com\":%f"
-                                                                "}", type.c_str(),cpuDelay,realCpuDelay,originalCpuDelay,com);
+                                                                "}", type.c_str(),cpuDelay,realCpuDelay,originalCpuDelay,originalRealCpuDelay,com);
                     //ok progressTimeCpu is an amount of flops, convert it to time first
                     newWallTime = pair.second->walltime - (progressTimeCpu/this->_speed);
                 }

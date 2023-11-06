@@ -583,7 +583,7 @@ Reservation Options:
 
    if (main_args.chkpt_interval.raw != "False")
    {
-        const boost::regex r(R"(^(real|simulated):([0-9]+)[-]([0-9]{2}):([0-9]{2}):([0-9]{2})(?:$|(?:[:]([0-9]+))))");
+        const boost::regex r(R"(^(real|simulated):([0-9]+)[-]([0-9]+):([0-9]+):([0-9]+)(?:$|(?:[:]([0-9]+))))");
         boost::smatch sm;
         if (boost::regex_search(main_args.chkpt_interval.raw,sm,r))
         {
