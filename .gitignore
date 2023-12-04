@@ -5,6 +5,7 @@
 *_pstate_changes.csv
 *_machine_states.csv
 *.pyc
+*.orig
 doc/doxygen_warnings.log
 doc/doxygen_doc
 build
