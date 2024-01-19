@@ -399,6 +399,8 @@ Failure Options:
   --fixed-failures <time-in-seconds>          Failures will happen every 'time in seconds'
                                               Can be used in conjunction with SMTBF
                                               [default: -1.0]
+  --failures-from-file <path>        Failures will come from log/simulated_failures.log
+                                     [default: none]
   --seed-failures                    Enables the seeding of random number generators for failures,
                                      making the results non-deterministic
                                      [default: false]
@@ -417,6 +419,7 @@ Failure Options:
                                      ORIGINAL-FCFS would put resubmitted jobs at the front of the queue
                                      based on their original submit time.
                                      [default: FCFS]
+ 
 Schedule Options:
   --queue-depth <int>               The amount of items in the queue that will be scheduled at a time
                                     A lower amount will improve performance of the scheduler and thus the simulation 
@@ -516,6 +519,7 @@ Reservation Options:
    main_args.start_from_checkpoint = args["--start-from-checkpoint"].asLong();
    main_args.checkpoint_signal = args["--checkpoint-batsim-signal"].asLong();
    main_args.queue_policy = args["--queue-policy"].asString();
+   main_args.failures_file = args["--failures-from-file"].asString();
    std::string copy = args["--copy"].asString();
    std::string submission_time_after = args["--submission-time-after"].asString();
    std::string submission_time_before = args["--submission-time-before"].asString();
@@ -1560,8 +1564,9 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("batsched_config", Value().SetString(main_args.batsched_config.c_str(),alloc),alloc);
     context->config_json.AddMember("repair_time", Value().SetDouble(main_args.repair_time),alloc);
     context->config_json.AddMember("fixed_failures",Value().SetDouble(main_args.fixed_failures),alloc);
+    context->config_json.AddMember("failure-from-file",Value().SetString(main_args.failures_file.c_str(),alloc),alloc);
     context->config_json.AddMember("log_b_log",Value().SetBool(main_args.log_b_log),alloc);
-
+    
 
     context->config_json.AddMember("output-folder",Value().SetString(main_args.export_prefix.c_str(),alloc),alloc);
     context->config_json.AddMember("share-packing", Value().SetBool(main_args.share_packing),alloc);
