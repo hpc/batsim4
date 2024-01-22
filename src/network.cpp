@@ -40,12 +40,23 @@ void request_reply_scheduler_process(BatsimContext * context, std::string send_b
 
         auto start = chrono::steady_clock::now();
         string message_received;
-
+        bool received=false;
         // Get the reply
         zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        if (zmq_msg_recv(&msg, context->zmq_socket, 0) == -1)
-            throw std::runtime_error(std::string("Cannot read message on socket (errno=") + strerror(errno) + ")");
+        while (!received)
+        {
+           
+            zmq_msg_init(&msg);
+            if (zmq_msg_recv(&msg, context->zmq_socket, 0) == -1)
+            {
+                if (errno == EINTR)
+                    continue;
+                else
+                    throw std::runtime_error(std::string("Cannot read message on socket (errno=") + strerror(errno) + ")");
+            }
+            received = true;
+            
+        }
 
         string raw_message_received(static_cast<char*>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
         message_received = raw_message_received;

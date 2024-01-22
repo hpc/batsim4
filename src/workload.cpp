@@ -808,8 +808,9 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
         }
  
         //ok we close out the last job without a comma, then close out jobs array
-         f<<"\t\t}\n"
-         <<"\t],\n";
+        if (first==false) // only close out last job if there are any jobs
+            f<<"\t\t}\n";
+        f<<"\t],\n";
         /*****************************************  Profiles Write Out *********************************/
         //now we do profiles, lets start it out
         f<<"\t\"profiles\":{\n";

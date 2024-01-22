@@ -26,6 +26,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <csignal>
 
 #include <string>
 #include <boost/regex.hpp>
@@ -83,6 +84,10 @@ bool file_exists(const std::string & filename)
 {
     struct stat buffer;
     return (stat(filename.c_str(), &buffer) == 0);
+}
+void on_signal_checkpoint(int signum)
+{
+    
 }
 
 /**
@@ -520,6 +525,7 @@ Reservation Options:
    main_args.checkpoint_signal = args["--checkpoint-batsim-signal"].asLong();
    main_args.queue_policy = args["--queue-policy"].asString();
    main_args.failures_file = args["--failures-from-file"].asString();
+   std::signal(main_args.checkpoint_signal,on_signal_checkpoint);
    std::string copy = args["--copy"].asString();
    std::string submission_time_after = args["--submission-time-after"].asString();
    std::string submission_time_before = args["--submission-time-before"].asString();

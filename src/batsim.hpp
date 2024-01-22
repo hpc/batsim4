@@ -243,3 +243,4 @@ void set_configuration(BatsimContext * context,
                        MainArguments & main_args);
 void write_to_config(BatsimContext * context,
                      MainArguments & main_args);
+
