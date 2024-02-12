@@ -506,6 +506,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                      parts.str_job_number +
                      parts.str_job_resubmit +
                      parts.str_job_checkpoint;
+        
     else
         job_id_str = parts.str_workload +
                      parts.str_job_number +
@@ -521,7 +522,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     {
         j->id = JobIdentifier(job_id_str);
     }
-    
+       
     // Get submission time
     xbt_assert(json_desc.HasMember("subtime"), "%s: job '%s' has no 'subtime' field",
                error_prefix.c_str(), j->id.to_string().c_str());
@@ -586,6 +587,13 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
 
     // TODO raise exception when the profile does not exist.
     std::string profile_name = json_desc["profile"].GetString();
+    if (nb_checkpoint != -1)
+    {
+        //ok, we have a profile from starting from a checkpoint
+        profile_name =  profile_name.substr(0,profile_name.find("$"));
+        profile_name += "$" + std::to_string(nb_checkpoint);
+
+    }
     xbt_assert(workload->profiles->exists(profile_name), "%s: the profile %s for job %s does not exist",
                error_prefix.c_str(), profile_name.c_str(), j->id.to_string().c_str());
     j->profile = workload->profiles->at(profile_name);
@@ -705,6 +713,20 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         json_desc_copy.AddMember("submission_times",sub_times,json_desc_copy.GetAllocator());
     if (json_desc_copy.HasMember("start"))
         json_desc_copy["start"]=j->start;
+    //we need to update the job_id and profile name in json_desc because of checkpointing-batsim
+    rapidjson::Value new_job_id;
+    new_job_id.SetString(j->id.to_string().c_str(),json_desc_copy.GetAllocator());
+    json_desc_copy["id"]=new_job_id;
+    rapidjson::Value new_profile_name;
+    
+    profile_name =  parts.str_job_number +
+                    parts.str_job_resubmit;
+    if (nb_checkpoint != -1)
+        profile_name += "$" + std::to_string(nb_checkpoint);
+    new_profile_name.SetString(profile_name.c_str(),json_desc_copy.GetAllocator());
+    
+    json_desc_copy["profile"] = new_profile_name;
+
 
     /*  *************************************************************************************
         *                                                                                   *
@@ -962,12 +984,14 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     // in the json raw description
     string json_description_tmp(buffer.GetString(), buffer.GetSize());
     /// @cond DOXYGEN_FAILS_PARSING_THIS_REGEX
-    std::regex r(R"("id"\s*:\s*(?:"*[^(,|})]*"*)\s*)");
+    //CCU-LANL this regex doesn't seem to be needed, and actually breaks checkpointing-batsim
+    //std::regex r(R"("id"\s*:\s*(?:"*[^(,|})]*"*)\s*)");
     /// @endcond
-    string replacement_str = "\"id\":\"" + j->id.to_string() + "\"";
+    //string replacement_str = "\"id\":\"" + j->id.to_string() + "\"";
     // XBT_INFO("Before regexp: %s", json_description_tmp.c_str());
-    j->json_description = std::regex_replace(json_description_tmp, r, replacement_str);
-
+   
+    //j->json_description = std::regex_replace(json_description_tmp, r, replacement_str);
+    j->json_description = json_description_tmp;
     // Let's check that the new description is a valid JSON string
     rapidjson::Document check_doc;
     check_doc.Parse(j->json_description.c_str());

@@ -52,11 +52,16 @@ void Profiles::load_from_json(const Document &doc, const string & filename, int 
         xbt_assert(key.IsString(), "%s: all children of the 'profiles' object must have a "
                    "string key", error_prefix.c_str());
         string profile_name = key.GetString();
+        if (nb_checkpoint != -1)
+        {
+            profile_name = profile_name.substr(0,profile_name.find("$"));
+            profile_name += "$" + std::to_string(nb_checkpoint);
+        }
 
         auto profile = Profile::from_json(profile_name, value, error_prefix, true, filename);
         xbt_assert(!exists(string(key.GetString())), "%s: duplication of profile name '%s'",
                    error_prefix.c_str(), key.GetString());
-        _profiles[string(key.GetString())] = profile;
+        _profiles[profile_name] = profile;
     }
 }
 
