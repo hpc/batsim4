@@ -35,12 +35,12 @@ JsonProtocolWriter::~JsonProtocolWriter()
 
 }
 
-void JsonProtocolWriter::append_requested_call(double date,int id, int forWhat)
+void JsonProtocolWriter::append_requested_call(double date,int id, int forWhat,std::string extra_data)
 {
     /* {
       "timestamp": 25.5,
       "type": "REQUESTED_CALL",
-      "data": {"id": 2,"forWhat":0}
+      "data": {"id": 2,"forWhat":0,"extra_data": "null"}
     } */
 
     xbt_assert(date >= _last_date, "Date inconsistency");
@@ -51,6 +51,8 @@ void JsonProtocolWriter::append_requested_call(double date,int id, int forWhat)
     Value data(rapidjson::kObjectType);
     data.AddMember("id", Value().SetInt(id),_alloc);
     data.AddMember("forWhat", Value().SetInt(forWhat),_alloc);
+
+    data.AddMember("extra_data",Value().SetString(extra_data.c_str(),_alloc),_alloc);
 
     event.AddMember("timestamp", Value().SetDouble(date), _alloc);
     event.AddMember("type", Value().SetString("REQUESTED_CALL"), _alloc);
@@ -1262,7 +1264,7 @@ void JsonProtocolReader::handle_call_me_later(int event_number,
     /* {
       "timestamp": 10.0,
       "type": "CALL_ME_LATER",
-      "data": {"timestamp": 25.5,"id": 2,"forWhat": 0}
+      "data": {"timestamp": 25.5,"id": 2,"forWhat": 0,"extra_data":"null"}
       
       forWhat is an enum call_me_later_type
     } */
@@ -1270,21 +1272,25 @@ void JsonProtocolReader::handle_call_me_later(int event_number,
     auto * message = new CallMeLaterMessage;
 
     xbt_assert(data_object.IsObject(), "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should be an object", event_number);
-    xbt_assert(data_object.MemberCount() == 3, "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should be of size 3 (size=%d)", event_number, data_object.MemberCount());
+    xbt_assert(data_object.MemberCount() == 4, "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should be of size 4 (size=%d)", event_number, data_object.MemberCount());
 
     xbt_assert(data_object.HasMember("timestamp"), "Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should contain a 'timestamp' key.", event_number);
     xbt_assert(data_object.HasMember("id"),"Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should contain an 'id' key.",event_number);
     xbt_assert(data_object.HasMember("forWhat"),"Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should contain a 'forWhat' key.",event_number);
+    xbt_assert(data_object.HasMember("extra_data"),"Invalid JSON message: the 'data' value of event %d (CALL_ME_LATER) should contain a 'extra_data' key.",event_number);
     const Value & timestamp_value = data_object["timestamp"];
     xbt_assert(timestamp_value.IsNumber(), "Invalid JSON message: the 'timestamp' value in the 'data' value of event %d (CALL_ME_LATER) should be a number.", event_number);
     const Value & forWhat_value = data_object["forWhat"];
     xbt_assert(forWhat_value.IsNumber(),"Invalid JSON message: the 'forWhat' value in the 'data' value of event %d (CALL_ME_LATER) should be a number (enum call_me_later_type) ",event_number);
      const Value & id_value = data_object["id"];
     xbt_assert(forWhat_value.IsNumber(),"Invalid JSON message: the 'id' value in the 'data' value of event %d (CALL_ME_LATER) should be a number ",event_number);
+    const Value & extra_data_value = data_object["extra_data"];
+    xbt_assert(extra_data_value.IsString(),"Invalid JSON message: the 'extra_data' value in the 'data' value of event %d (CALL_ME_LATER) should be a string ",event_number);
     message->target_time = timestamp_value.GetDouble();
     message->forWhat = forWhat_value.GetInt();
     message->id = id_value.GetInt();
-
+    message->extra_data = extra_data_value.GetString();
+  
     if (message->target_time < simgrid::s4u::Engine::get_clock())
     {
         XBT_WARN("Event %d (CALL_ME_LATER) asks to be called at time %g but it is already reached", event_number, message->target_time);

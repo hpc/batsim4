@@ -73,7 +73,8 @@ namespace batsim_tools{
       double target_time;
       double date_received;
       int id;
-      batsim_tools::call_me_later_types forWhat; 
+      batsim_tools::call_me_later_types forWhat;
+      std::string extra_data; 
     };
     struct call_me_later_compare{
       bool operator()(const double lhs, double rhs)const;

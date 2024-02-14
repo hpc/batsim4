@@ -216,6 +216,7 @@ struct CallMeLaterMessage
     double target_time; //!< The time at which Batsim should send a message to the decision real process
     int id; // CCU-LANL ADDITION
     int forWhat; // CCU-LANL ADDITION
+    std::string extra_data; // CCU-LANL ADDITION
     
 };
 

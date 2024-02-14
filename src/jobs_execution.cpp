@@ -586,7 +586,7 @@ void execute_job_process(BatsimContext * context,
     job->execution_actors.erase(simgrid::s4u::Actor::self());
 }
 
-void waiter_process(double target_time, const ServerData * server_data, int id, int forWhat)
+void waiter_process(double target_time, const ServerData * server_data, int id, int forWhat,std::string extra_data)
 {
     double curr_time = simgrid::s4u::Engine::get_clock();
 
@@ -617,6 +617,7 @@ void waiter_process(double target_time, const ServerData * server_data, int id, 
         CallMeLaterMessage *message = new CallMeLaterMessage;
         message->id = id;
         message->forWhat = forWhat;
+        message->extra_data = extra_data;
         send_message("server", IPMessageType::WAITING_DONE,static_cast<void*>(message));
     }
 }

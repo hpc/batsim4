@@ -599,7 +599,7 @@ void server_on_waiting_done(ServerData * data,
 {
     xbt_assert(task_data->data != nullptr);
     auto * message = static_cast<CallMeLaterMessage *>(task_data->data);
-    data->context->proto_writer->append_requested_call(simgrid::s4u::Engine::get_clock(),message->id,message->forWhat);
+    data->context->proto_writer->append_requested_call(simgrid::s4u::Engine::get_clock(),message->id,message->forWhat,message->extra_data);
     --data->nb_waiters;
 }
 
@@ -1016,13 +1016,14 @@ void server_on_call_me_later(ServerData * data,
     string pname = "waiter " + to_string(message->target_time);
     simgrid::s4u::Actor::create(pname.c_str(),
                                 data->context->machines.master_machine()->host,
-                                waiter_process, message->target_time,data, message->id, message->forWhat);
+                                waiter_process, message->target_time,data, message->id, message->forWhat,message->extra_data);
     ++data->nb_waiters;
     batsim_tools::call_me_later_data* cml_data = new batsim_tools::call_me_later_data();
     cml_data->date_received = simgrid::s4u::Engine::get_clock();
     cml_data->target_time = message->target_time;
     cml_data->forWhat = static_cast<batsim_tools::call_me_later_types>(message->forWhat);
     cml_data->id = message->id;
+    cml_data->extra_data = message->extra_data;
     data->context->call_me_laters.insert(std::pair(message->target_time,cml_data));
 }
 

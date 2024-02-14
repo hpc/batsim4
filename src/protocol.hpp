@@ -200,7 +200,7 @@ public:
      * @brief Appends a REQUESTED_CALL message.
      * @param[in] date The event date. Must be greater than or equal to the previous event.
      */
-    virtual void append_requested_call(double date,int id,int forWhat) = 0;
+    virtual void append_requested_call(double date,int id,int forWhat,std::string extra_data) = 0;
 
     // Management functions
     /**
@@ -376,7 +376,7 @@ public:
      * @brief Appends a REQUESTED_CALL message.
      * @param[in] date The event date. Must be greater than or equal to the previous event.
      */
-    void append_requested_call(double date, int id, int forWhat);
+    void append_requested_call(double date, int id, int forWhat,std::string extra_data);
 
     // Management functions
     /**
