@@ -20,6 +20,13 @@ namespace batsim_tools{
     
     enum class KILL_TYPES {NONE,FIXED_FAILURES,SMTBF,MTBF,RESERVATION};
     enum class call_me_later_types {FIXED_FAILURE,SMTBF,MTBF,REPAIR_DONE,RESERVATION_START,CHECKPOINT_BATSCHED,RECOVER_FROM_CHECKPOINT};
+    enum class REJECT_TYPES
+    {
+        NOT_ENOUGH_RESOURCES
+        ,NOT_ENOUGH_AVAILABLE_RESOURCES
+        ,NO_WALLTIME
+        ,NO_RESERVATION_ALLOCATION
+    };
     struct Kill_Message{
       std::string simple_id;
       JobIdentifier *id=nullptr;
@@ -38,6 +45,7 @@ namespace batsim_tools{
       int nb_checkpoints=0;
         
     };
+    
     struct start_from_chkpt{
       int nb_folder = 0;
       int nb_checkpoint = 0;

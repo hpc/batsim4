@@ -406,17 +406,17 @@ Failure Options:
                                               [default: -1.0]
   --failures-from-file <path>        Failures will come from log/simulated_failures.log
                                      [default: none]
-  --seed-failures                    Enables the seeding of random number generators for failures,
-                                     making the results non-deterministic
-                                     [default: false]
+  --seed-failures <int>              Seeds the failures with <int> making the failures deterministic, otherwise it will use time to seed the failures
+                                     [default: -1]
+  --seed-failure-machine <int>       Seeds the machine that will have a failure making it deterministic, otherwise it will use time to seed the failure machine.
+                                     [default: -1]
   --MTTR <time-in-seconds>           Sets a system-wide Mean Time To Repair, in seconds, for a node that goes down
                                      [default: -1.0]
   --repair-time <time-in-seconds>    Sets a system-wide repair time, in seconds, for a node that goes down
                                      [default: 0.0]
-  --seed-repair-times                Enables the seeding of random number generators for repair times,
-                                     making the results non-deterministic
-                                     [default: false]
-  --log-failures                     When set, puts failures and their type in a log file
+  --seed-repair-times <int>          Seeds the repair_times with <int> making the repair_times determinisitc, otherwise it will use time to seed the repair_times
+                                     [default: -1]
+    --log-failures                     When set, puts failures and their type in a log file
                                      [default: false]
   --queue-policy <STR>               What the policy for the queue is when dealing with a re-submitted
                                      job.  The options are:   FCFS | ORIGINAL-FCFS
@@ -496,7 +496,8 @@ Reservation Options:
    main_args.MTBF =  (double) ::atof(args["--MTBF"].asString().c_str());
    main_args.SMTBF = (double) ::atof(args["--SMTBF"].asString().c_str());
    main_args.global_checkpointing_interval = (double) ::atof(args["--checkpointing-interval"].asString().c_str());
-   main_args.seed_failures = args["--seed-failures"].asBool();
+   main_args.seed_failures = args["--seed-failures"].asLong();
+   main_args.seed_failure_machine = args["--seed-failure-machine"].asLong();
    main_args.repair_time = atof(args["--repair-time"].asString().c_str());
    main_args.fixed_failures = atof(args["--fixed-failures"].asString().c_str());
    main_args.log_b_log = args["--log-b-log"].asBool();
@@ -517,7 +518,7 @@ Reservation Options:
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
-   main_args.seed_repair_time = args["--seed-repair-times"].asBool();
+   main_args.seed_repair_time = args["--seed-repair-times"].asLong();
    main_args.MTTR = atof(args["--MTTR"].asString().c_str());
    main_args.chkpt_interval.raw = args["--checkpoint-batsim-interval"].asString();
    main_args.chkpt_interval.keep = args["--checkpoint-batsim-keep"].asLong();
@@ -1566,7 +1567,8 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("checkpointing_interval",Value().SetDouble(main_args.global_checkpointing_interval),alloc);
     context->config_json.AddMember("MTBF",Value().SetDouble(main_args.MTBF),alloc);
     context->config_json.AddMember("SMTBF",Value().SetDouble(main_args.SMTBF),alloc);
-    context->config_json.AddMember("seed-failures",Value().SetBool(main_args.seed_failures),alloc);
+    context->config_json.AddMember("seed-failures",Value().SetInt(main_args.seed_failures),alloc);
+    context->config_json.AddMember("seed-failure-machine",Value().SetInt(main_args.seed_failure_machine),alloc);
     context->config_json.AddMember("batsched_config", Value().SetString(main_args.batsched_config.c_str(),alloc),alloc);
     context->config_json.AddMember("repair_time", Value().SetDouble(main_args.repair_time),alloc);
     context->config_json.AddMember("fixed_failures",Value().SetDouble(main_args.fixed_failures),alloc);
@@ -1589,7 +1591,7 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("svg-frame-end",Value().SetInt(main_args.svg_frame_end),alloc);
     context->config_json.AddMember("svg-output-start",Value().SetInt(main_args.svg_output_start),alloc);
     context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
-    context->config_json.AddMember("seed-repair-time",Value().SetBool(main_args.seed_repair_time),alloc);
+    context->config_json.AddMember("seed-repair-time",Value().SetInt(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
     context->config_json.AddMember("queue-policy",Value().SetString(main_args.queue_policy.c_str(),alloc),alloc);
     

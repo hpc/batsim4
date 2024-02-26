@@ -148,14 +148,17 @@ struct MainArguments
     double compute_checkpointing_error = 1.0; //!< The amount of error to add to the optimal interval formula, for testing purposes.
     double MTBF = -1.0;  //!< The Mean Time Between Failure (kills the first job in the running_jobs vector with a freq. of random exp.dist. with this Mean )
     double SMTBF = -1.0;  //!< The System Mean Time Between Failure (kills all jobs running on randomly chosen node with freq. of random exp.dist. with this Mean)
-    bool seed_failures = false; //!< Enable seeding for the random number generators.  Makes it non-deterministic
+    int seed_failures = -1;
+    int seed_failure_machine = -1;
+    //bool seed_failures = false; //!< Enable seeding for the random number generators.  Makes it non-deterministic
     std::string batsched_config = ""; //!< Any values we want to send over to the scheduler that we don't specifically want to code for here
     double performance_factor = 1.0; //!< the performance factor, multiplied by the duration of each job
     double global_checkpointing_interval = -1.0; //!< a global checkpointing interval that will override any computed or other per-job checkpointing
     double repair_time = 0.0; //!< a global repair time for a node to come back on-line after a fault
     double fixed_failures = -1.0; //!< a global time for fixed failures to happen.  Does exactly what SMTBF does except not random times and not based on some distribution. Mostly for debugging.
     std::string failures_file="none";
-    bool seed_repair_time = false; //!< Enable seeding for th erandom number generators for repair time.  Makes it non-deterministic
+    int seed_repair_time = -1;
+    //bool seed_repair_time = false; //!< Enable seeding for th erandom number generators for repair time.  Makes it non-deterministic
     double MTTR = -1.0; //!< The System Mean Time To Repair exponentially distributed with this Mean.
 
     bool log_b_log = false; // !< whether to log failures at expe-out/log/failures.log

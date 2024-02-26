@@ -445,7 +445,10 @@ bool Job::is_complete() const
     return (state == JobState::JOB_STATE_COMPLETED_SUCCESSFULLY) ||
            (state == JobState::JOB_STATE_COMPLETED_KILLED) ||
            (state == JobState::JOB_STATE_COMPLETED_FAILED) ||
-           (state == JobState::JOB_STATE_REJECTED) ||
+           (state == JobState::JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES) ||
+           (state == JobState::JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES) ||
+           (state == JobState::JOB_STATE_REJECTED_NO_WALLTIME) ||
+           (state == JobState::JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION) ||
            (state == JobState::JOB_STATE_COMPLETED_WALLTIME_REACHED);
 }
 
@@ -1098,8 +1101,17 @@ std::string job_state_to_string(const JobState & state)
     case JobState::JOB_STATE_COMPLETED_KILLED:
         job_state = "COMPLETED_KILLED";
         break;
-    case JobState::JOB_STATE_REJECTED:
-        job_state = "REJECTED";
+    case JobState::JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES:
+        job_state = "REJECTED_NOT_ENOUGH_RESOURCES";
+        break;
+    case JobState::JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES:
+        job_state = "REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES";
+        break;
+    case JobState::JOB_STATE_REJECTED_NO_WALLTIME:
+        job_state = "REJECTED_NO_WALLTIME";
+        break;
+    case JobState::JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION:
+        job_state = "REJECTED_NO_RESERVATION_ALLOCATION";
         break;
     }
     return job_state;
@@ -1137,9 +1149,21 @@ JobState job_state_from_string(const std::string & state)
     {
         new_state = JobState::JOB_STATE_COMPLETED_WALLTIME_REACHED;
     }
-    else if (state == "REJECTED")
+    else if (state == "REJECTED_NOT_ENOUGH_RESOURCES")
     {
-        new_state = JobState::JOB_STATE_REJECTED;
+        new_state = JobState::JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES;
+    }
+    else if (state == "REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES")
+    {
+        new_state = JobState::JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES;
+    }
+    else if (state == "REJECTED_NO_WALLTIME")
+    {
+        new_state = JobState::JOB_STATE_REJECTED_NO_WALLTIME;
+    }
+    else if (state == "REJECTED_NO_RESERVATION_ALLOCATION")
+    {
+        new_state = JobState::JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION;
     }
     else
     {

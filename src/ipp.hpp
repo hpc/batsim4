@@ -165,6 +165,7 @@ struct ChangeJobStateMessage
 struct JobRejectedMessage
 {
     JobIdentifier job_id; //!< The JobIdentifier
+    batsim_tools::REJECT_TYPES forWhat;
 };
 
 /**

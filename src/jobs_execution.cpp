@@ -657,9 +657,12 @@ void killer_process(BatsimContext * context,
         
         auto job = context->workloads.job_at(*(job_msg->id));
 
-        xbt_assert(! (job->state == JobState::JOB_STATE_REJECTED ||
-                      job->state == JobState::JOB_STATE_SUBMITTED ||
-                      job->state == JobState::JOB_STATE_NOT_SUBMITTED),
+        xbt_assert(! ((job->state == JobState::JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES) ||
+                     (job->state == JobState::JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES) ||
+                     (job->state == JobState::JOB_STATE_REJECTED_NO_WALLTIME) ||
+                     (job->state == JobState::JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION) ||
+                     (job->state == JobState::JOB_STATE_SUBMITTED) ||
+                     (job->state == JobState::JOB_STATE_NOT_SUBMITTED)),
                    "Bad kill: job %s has not been started", job->id.to_cstring());
 
         if (job->state == JobState::JOB_STATE_RUNNING)

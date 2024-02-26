@@ -1148,7 +1148,10 @@ void JobsTracer::finalize()
 void JobsTracer::write_job(const JobPtr job)
 {
     int success = (job->state == JobState::JOB_STATE_COMPLETED_SUCCESSFULLY);
-    bool rejected = (job->state == JobState::JOB_STATE_REJECTED);
+    bool rejected = ((job->state == JobState::JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES) ||
+                     (job->state == JobState::JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES) ||
+                     (job->state == JobState::JOB_STATE_REJECTED_NO_WALLTIME) ||
+                     (job->state == JobState::JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION) );
     bool was_killed = (job->state == JobState::JOB_STATE_COMPLETED_KILLED);
 
     // Update counters for the schedule metrics

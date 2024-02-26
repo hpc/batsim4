@@ -984,19 +984,23 @@ void JsonProtocolReader::handle_reject_job(int event_number,
     /* {
       "timestamp": 10.0,
       "type": "REJECT_JOB",
-      "data": { "job_id": "w12!45" }
+      "data": { "job_id": "w12!45" ,"forWhat": 0}
     } */
 
     xbt_assert(data_object.IsObject(), "Invalid JSON message: the 'data' value of event %d (REJECT_JOB) should be an object", event_number);
-    xbt_assert(data_object.MemberCount() == 1, "Invalid JSON message: the 'data' value of event %d (REJECT_JOB) should be of size 1 (size=%d)", event_number, data_object.MemberCount());
+    xbt_assert(data_object.MemberCount() == 2, "Invalid JSON message: the 'data' value of event %d (REJECT_JOB) should be of size 2 (size=%d)", event_number, data_object.MemberCount());
 
     xbt_assert(data_object.HasMember("job_id"), "Invalid JSON message: the 'data' value of event %d (REJECT_JOB) should contain a 'job_id' key.", event_number);
     const Value & job_id_value = data_object["job_id"];
     xbt_assert(job_id_value.IsString(), "Invalid JSON message: the 'job_id' value in the 'data' value of event %d (REJECT_JOB) should be a string.", event_number);
+    xbt_assert(data_object.HasMember("forWhat"), "Invalid JSON message: the 'data' value of event %d (REJECT_JOB) should contain a 'forWhat' key.", event_number);
+    const Value & forWhat_value = data_object["forWhat"];
     string job_id = job_id_value.GetString();
+    int forWhat = forWhat_value.GetInt();
 
     JobRejectedMessage * message = new JobRejectedMessage;
     message->job_id = JobIdentifier(job_id);
+    message->forWhat = static_cast<batsim_tools::REJECT_TYPES>(forWhat);
 
     send_message_at_time(timestamp, "server", IPMessageType::SCHED_REJECT_JOB, static_cast<void*>(message));
 }

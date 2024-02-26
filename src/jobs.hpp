@@ -149,7 +149,10 @@ enum class JobState
     ,JOB_STATE_COMPLETED_FAILED             //!< The job execution finished before its walltime but the job failed.
     ,JOB_STATE_COMPLETED_WALLTIME_REACHED   //!< The job has reached its walltime and has been killed.
     ,JOB_STATE_COMPLETED_KILLED             //!< The job has been killed.
-    ,JOB_STATE_REJECTED                     //!< The job has been rejected by the scheduler.
+    ,JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES                     //!< The job has been rejected by the scheduler.
+    ,JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES
+    ,JOB_STATE_REJECTED_NO_WALLTIME
+    ,JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION
 };
 
 

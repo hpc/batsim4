@@ -850,7 +850,10 @@ void server_on_change_job_state(ServerData * data,
             data->nb_running_jobs++;
             xbt_assert(data->nb_running_jobs <= data->nb_submitted_jobs, "inconsistency: nb_running_jobs > nb_submitted_jobs");
             break;
-        case JobState::JOB_STATE_REJECTED:
+        case JobState::JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES:
+        case JobState::JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES:
+        case JobState::JOB_STATE_REJECTED_NO_WALLTIME:
+        case JobState::JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION:
             data->nb_completed_jobs++;
             xbt_assert(data->nb_completed_jobs + data->nb_running_jobs <= data->nb_submitted_jobs, "inconsistency: nb_completed_jobs + nb_running_jobs > nb_submitted_jobs");
             data->context->jobs_tracer.write_job(job);
@@ -944,8 +947,23 @@ void server_on_reject_job(ServerData * data,
                "Invalid rejection received: job '%s' cannot be rejected at the present time. "
                "To be rejected, a job must be submitted and not allocated yet.",
                job->id.to_cstring());
-
-    job->state = JobState::JOB_STATE_REJECTED;
+    
+    switch(message->forWhat)
+    {
+        case batsim_tools::REJECT_TYPES::NOT_ENOUGH_RESOURCES:
+            job->state = JobState::JOB_STATE_REJECTED_NOT_ENOUGH_RESOURCES;
+            break;
+        case batsim_tools::REJECT_TYPES::NOT_ENOUGH_AVAILABLE_RESOURCES:
+            job->state = JobState::JOB_STATE_REJECTED_NOT_ENOUGH_AVAILABLE_RESOURCES;
+            break;
+        case batsim_tools::REJECT_TYPES::NO_WALLTIME:
+            job->state = JobState::JOB_STATE_REJECTED_NO_WALLTIME;
+            break;
+        case batsim_tools::REJECT_TYPES::NO_RESERVATION_ALLOCATION:
+            job->state = JobState::JOB_STATE_REJECTED_NO_RESERVATION_ALLOCATION;
+            break;
+    }
+    
     data->nb_completed_jobs++;
 
     XBT_INFO("Job '%s' has been rejected", job->id.to_cstring());
