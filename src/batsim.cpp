@@ -416,7 +416,13 @@ Failure Options:
                                      [default: 0.0]
   --seed-repair-times <int>          Seeds the repair_times with <int> making the repair_times determinisitc, otherwise it will use time to seed the repair_times
                                      [default: -1]
-    --log-failures                     When set, puts failures and their type in a log file
+  --reject-jobs-after-nb-repairs <int>        When failures result in machines going down because of a repair time on them, some jobs may not be able to run at all
+                                              until machines become available.  If there are only jobs in the queue that fall into this situation then a mode can be flipped
+                                              to count how many times a repair is done before any job has executed.  Once a job is able to execute, the count is reset.
+                                              This setting waits <int> number of repairs being done before it gives up and rejects the jobs that are left.
+                                              '-1' means the jobs will never be rejected in this situation.
+                                              [default: -1]
+  --log-failures                     When set, puts failures and their type in a log file
                                      [default: false]
   --queue-policy <STR>               What the policy for the queue is when dealing with a re-submitted
                                      job.  The options are:   FCFS | ORIGINAL-FCFS
@@ -520,6 +526,7 @@ Reservation Options:
    main_args.output_extra_info = !(args["--turn-off-extra-info"].asBool());
    main_args.seed_repair_time = args["--seed-repair-times"].asLong();
    main_args.MTTR = atof(args["--MTTR"].asString().c_str());
+   main_args.reject_jobs_after_nb_repairs = args["--reject-jobs-after-nb-repairs"].asLong();
    main_args.chkpt_interval.raw = args["--checkpoint-batsim-interval"].asString();
    main_args.chkpt_interval.keep = args["--checkpoint-batsim-keep"].asLong();
    main_args.start_from_checkpoint = args["--start-from-checkpoint"].asLong();
@@ -1593,6 +1600,7 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
     context->config_json.AddMember("seed-repair-time",Value().SetInt(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
+    context->config_json.AddMember("reject-jobs-after-nb-repairs",Value().SetInt(main_args.reject_jobs_after_nb_repairs),alloc);
     context->config_json.AddMember("queue-policy",Value().SetString(main_args.queue_policy.c_str(),alloc),alloc);
     
     Value chkpt_json(rapidjson::kObjectType);

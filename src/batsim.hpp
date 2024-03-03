@@ -158,6 +158,7 @@ struct MainArguments
     double fixed_failures = -1.0; //!< a global time for fixed failures to happen.  Does exactly what SMTBF does except not random times and not based on some distribution. Mostly for debugging.
     std::string failures_file="none";
     int seed_repair_time = -1;
+    int reject_jobs_after_nb_repairs = -1;
     //bool seed_repair_time = false; //!< Enable seeding for th erandom number generators for repair time.  Makes it non-deterministic
     double MTTR = -1.0; //!< The System Mean Time To Repair exponentially distributed with this Mean.
 
