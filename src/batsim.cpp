@@ -413,7 +413,7 @@ Failure Options:
   --MTTR <time-in-seconds>           Sets a system-wide Mean Time To Repair, in seconds, for a node that goes down
                                      [default: -1.0]
   --repair-time <time-in-seconds>    Sets a system-wide repair time, in seconds, for a node that goes down
-                                     [default: 0.0]
+                                     [default: -1.0]
   --seed-repair-times <int>          Seeds the repair_times with <int> making the repair_times determinisitc, otherwise it will use time to seed the repair_times
                                      [default: -1]
   --reject-jobs-after-nb-repairs <int>        When failures result in machines going down because of a repair time on them, some jobs may not be able to run at all

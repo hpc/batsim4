@@ -161,9 +161,10 @@ void JsonProtocolWriter::append_simulation_begins(Machines & machines,
     }
     data.AddMember("storage_resources", Value().CopyFrom(storage_resources, _alloc), _alloc);
 
-
+    /*
     Value workloads_dict(rapidjson::kObjectType);
     Value profiles_dict(rapidjson::kObjectType);
+    
     Value jobs_dict(rapidjson::kObjectType); //CCU-LANL Additions
     for (const auto & workload : workloads.workloads())
     {
@@ -185,6 +186,7 @@ void JsonProtocolWriter::append_simulation_begins(Machines & machines,
         jobs_dict.AddMember(
             Value().SetString(workload.first.c_str(), _alloc),
             jobs,_alloc);
+        
         //CCU-LANL Additions END
         
         Value profile_dict(rapidjson::kObjectType);
@@ -204,10 +206,11 @@ void JsonProtocolWriter::append_simulation_begins(Machines & machines,
                 Value().SetString(workload.first.c_str(), _alloc),
                 profile_dict, _alloc);
     }
+    
     data.AddMember("workloads", workloads_dict, _alloc);
     data.AddMember("jobs",jobs_dict,_alloc); //CCU-LANL Additions
     data.AddMember("profiles", profiles_dict, _alloc);
-
+    */
     Value event(rapidjson::kObjectType);
     event.AddMember("timestamp", Value().SetDouble(date), _alloc);
     event.AddMember("type", Value().SetString("SIMULATION_BEGINS"), _alloc);
