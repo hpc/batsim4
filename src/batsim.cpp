@@ -1621,10 +1621,18 @@ void write_to_config(BatsimContext *context,
     start_from_checkpoint.AddMember("nb_previously_completed",Value().SetInt((int)context->start_from_checkpoint.nb_previously_completed),alloc);
     start_from_checkpoint.AddMember("nb_original_jobs",Value().SetInt((int)context->start_from_checkpoint.nb_original_jobs),alloc);
     start_from_checkpoint.AddMember("started_from_checkpoint",Value().SetBool(context->start_from_checkpoint.started_from_checkpoint),alloc);
-
+    Value expected_submissions(rapidjson::kArrayType);
+    expected_submissions.Reserve(context->start_from_checkpoint.expected_submissions.size(),alloc);
+    for (auto aString:context->start_from_checkpoint.expected_submissions)
+    {
+        expected_submissions.PushBack(Value().SetString(aString.c_str(),alloc),alloc);
+    }
+    start_from_checkpoint.AddMember("expected_submissions",Value().CopyFrom(expected_submissions,alloc),alloc);
+    
     context->config_json.AddMember("start-from-checkpoint",start_from_checkpoint,alloc); 
 
     context->config_json.AddMember("checkpoint-signal",Value().SetInt((int)main_args.checkpoint_signal),alloc); 
+    
 
 
     // others

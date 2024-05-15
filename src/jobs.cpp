@@ -687,6 +687,9 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         xbt_assert(json_desc.HasMember("progressTimeCpu"),"%s: job '%s' has no 'progressTimeCpu' field"
         ", but we are starting-from-checkpoint",error_prefix.c_str(),j->id.to_string().c_str());
         j->checkpoint_job_data->progressTimeCpu = json_desc["progressTimeCpu"].GetDouble();
+        //if this job submits at the submission start time ( the simulated time of the checkpoint)
+        if (j->submission_time == workload->context->start_from_checkpoint.submission_start)
+            workload->context->start_from_checkpoint.expected_submissions.push_back(j->id.to_string());
 
         
     }

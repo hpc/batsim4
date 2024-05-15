@@ -53,6 +53,8 @@ namespace batsim_tools{
       int nb_actually_completed=0;
       int nb_previously_completed=0;
       bool started_from_checkpoint=false;
+      double submission_start;
+      std::vector<std::string> expected_submissions;
     };
     struct checkpoint_job_data{
       int state = -1;

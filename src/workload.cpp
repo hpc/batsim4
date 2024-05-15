@@ -505,6 +505,10 @@ void Workload::load_from_json_chkpt(const std::string &json_filename, int &nb_ma
     const Value & nb_res_node = doc["nb_res"];
     xbt_assert(nb_res_node.IsInt(), "Invalid JSON file '%s': the 'nb_res' field is not an integer", json_filename.c_str());
     nb_machines = nb_res_node.GetInt();
+    xbt_assert(doc.HasMember("simulated_time"),"Invalid JSON file '%s': the 'simulated_time' field is missing",json_filename.c_str());
+    const Value & simulated_time = doc["simulated_time"];
+    xbt_assert(simulated_time.IsDouble(),"Invalid JSON file '%s': the 'simulated_time' field is not a double",json_filename.c_str());
+    this->context->start_from_checkpoint.submission_start = simulated_time.GetDouble();
     xbt_assert(nb_machines > 0, "Invalid JSON file '%s': the value of the 'nb_res' field is invalid (%d)",
                json_filename.c_str(), nb_machines);
     xbt_assert(doc.HasMember("nb_checkpoint"),"Invalid JSON file '%s': the 'nb_checkpoint' field is missing and you gave batsim the --start-from-checkpoint option",
@@ -546,6 +550,7 @@ void Workload::load_from_json_chkpt(const std::string &json_filename, int &nb_ma
 
     XBT_INFO("Removing unreferenced profiles from memory...");
     profiles->remove_unreferenced_profiles();
+
 }
 
 
@@ -615,10 +620,12 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
     std::ofstream f(filename,std::ios_base::trunc);
     if (f.is_open())
     {
+        double now = double(simgrid::s4u::Engine::get_clock());
         //start our file
         f<<std::fixed<<std::setprecision(15)
         <<"{\n"
             <<"\t\"nb_res\":"<<this->context->machines.nb_machines()<<",\n"
+            <<"\t\"simulated_time\":"<<now<<",\n"
             <<"\t\"nb_checkpoint\":"<<this->context->start_from_checkpoint.nb_checkpoint<<",\n"
             <<"\t\"nb_actually_completed\":"<<this->context->start_from_checkpoint.nb_actually_completed<<",\n"
             <<"\t\"nb_original_jobs\":"<<this->context->start_from_checkpoint.nb_original_jobs<<",\n"
@@ -629,7 +636,6 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
         bool running = false;
         double progress = 0;
         double submit = 0;
-        double now = double(simgrid::s4u::Engine::get_clock());
         int state = 0;
         long double runtime=0;
         std::string allocation;
