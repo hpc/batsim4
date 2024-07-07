@@ -1501,7 +1501,6 @@ void JsonProtocolReader::handle_notify(int event_number,
       const Value & utilization_value = data_object["data"];
       xbt_assert(utilization_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = utilization is not a string");
       std::string utilization = utilization_value.GetString();
-
       context->utilization = std::stod(utilization);
     }
     else if (notify_type == "utilization_no_resv")
@@ -1519,65 +1518,80 @@ void JsonProtocolReader::handle_notify(int event_number,
       const Value & PID_value = data_object["data"];
       xbt_assert(PID_value.IsString(),"Invalid JSON: data element to NOTIFY event with type = PID is not a string");
       std::string PID = PID_value.GetString();
-
       context->batsched_PID = std::stoi(PID);
     }
     else if (notify_type == "checkpoint")
     {
-      std::string prefix = context->export_prefix;
-      prefix = prefix.substr(0,prefix.rfind("/"));
-      std::string checkpoint_base = prefix+"/checkpoint";
-      std::string checkpoint_dir=checkpoint_base+"_1";
-      batsim_tools::batsim_chkpt_interval &interval = context->batsim_checkpoint_interval;
-      //create our directories
-       if (!fs::exists(fs::symlink_status(checkpoint_base+"_latest")))
+      std::string iteration = data_object["data"].GetString();
+      if (iteration == "1" || iteration == "2" || iteration == "3")
       {
-        fs::create_directory_symlink(checkpoint_dir,checkpoint_base+"_latest");
-      }
-      
-      //if we are keeping folders of previous checkpoints then we need to move the directories around
-      if (interval.keep > 1)
-      {
-        interval.nb_checkpoints++;
-        int start = interval.nb_checkpoints -1;
-        std::string from;
-        std::string to;
-        //if greater than our first
-        if (start > 0)
-        {
-          if (start >= interval.keep)
-          {
-            //ok we have all the folders, put start at the ending folder
-            start = interval.keep -1;
-          }
-          for (int i=start;i>0;i--)
-          {
-            //first make sure the directory we are moving to is not there
-            fs::remove_all(checkpoint_base+batsim_tools::chkpt_name(i));
-            from = checkpoint_base+batsim_tools::chkpt_name(i-1);
-            to = checkpoint_base+batsim_tools::chkpt_name(i);
-            fs::rename(from,to);
-          }
-        }
-      }
-      //we keep moving checkpoint_1 down the line, so we need to keep creating checkpoint_1
-      fs::create_directories(checkpoint_dir);
-     
-      //flush the out_jobs.csv file before saving it
-      context->jobs_tracer.flush_close_reopen();
-      if (fs::exists(prefix+"/out_jobs.csv"))
-        fs::copy_file(prefix+"/out_jobs.csv",checkpoint_dir+"/out_jobs.csv",fs::copy_options::overwrite_existing);
-      Workload * w0 = context->workloads["w0"];
-      w0->write_out_batsim_checkpoint(checkpoint_dir);
-      
-      
+
         auto * message = new CallMeLaterMessage;
 
         
         message->target_time = simgrid::s4u::Engine::get_clock();
-        message->forWhat = static_cast<int>(batsim_tools::call_me_later_types::CHECKPOINT_BATSCHED);
+        message->forWhat = static_cast<int>(batsim_tools::call_me_later_types::CHECKPOINT_SYNC);
         message->id = 1; //this value doesn't really matter.  If the frequency of checkpoints was high, it may matter.
         send_message_at_time(timestamp, "server", IPMessageType::SCHED_CALL_ME_LATER, static_cast<void*>(message));
+      }
+      else if (iteration == "4")
+      {
+        
+        std::string prefix = context->export_prefix;
+        prefix = prefix.substr(0,prefix.rfind("/"));
+        std::string checkpoint_base = prefix+"/checkpoint";
+        std::string checkpoint_dir=checkpoint_base+"_1";
+        batsim_tools::batsim_chkpt_interval &interval = context->batsim_checkpoint_interval;
+        //create our directories
+        if (!fs::exists(fs::symlink_status(checkpoint_base+"_latest")))
+        {
+          fs::create_directory_symlink(checkpoint_dir,checkpoint_base+"_latest");
+        }
+        
+        //if we are keeping folders of previous checkpoints then we need to move the directories around
+        if (interval.keep > 1)
+        {
+          interval.nb_checkpoints++;
+          int start = interval.nb_checkpoints -1;
+          std::string from;
+          std::string to;
+          //if greater than our first
+          if (start > 0)
+          {
+            if (start >= interval.keep)
+            {
+              //ok we have all the folders, put start at the ending folder
+              start = interval.keep -1;
+            }
+            for (int i=start;i>0;i--)
+            {
+              //first make sure the directory we are moving to is not there
+              fs::remove_all(checkpoint_base+batsim_tools::chkpt_name(i));
+              from = checkpoint_base+batsim_tools::chkpt_name(i-1);
+              to = checkpoint_base+batsim_tools::chkpt_name(i);
+              fs::rename(from,to);
+            }
+          }
+        }
+        //we keep moving checkpoint_1 down the line, so we need to keep creating checkpoint_1
+        fs::create_directories(checkpoint_dir);
+      
+        //flush the out_jobs.csv file before saving it
+        context->jobs_tracer.flush_close_reopen();
+        if (fs::exists(prefix+"/out_jobs.csv"))
+          fs::copy_file(prefix+"/out_jobs.csv",checkpoint_dir+"/out_jobs.csv",fs::copy_options::overwrite_existing);
+        Workload * w0 = context->workloads["w0"];
+        w0->write_out_batsim_checkpoint(checkpoint_dir);
+        
+        
+          auto * message = new CallMeLaterMessage;
+
+          
+          message->target_time = simgrid::s4u::Engine::get_clock();
+          message->forWhat = static_cast<int>(batsim_tools::call_me_later_types::CHECKPOINT_BATSCHED);
+          message->id = 1; //this value doesn't really matter.  If the frequency of checkpoints was high, it may matter.
+          send_message_at_time(timestamp, "server", IPMessageType::SCHED_CALL_ME_LATER, static_cast<void*>(message));
+      }
     }
     else if (notify_type == "recover_from_checkpoint")
     {

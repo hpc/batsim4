@@ -19,7 +19,7 @@ namespace batsim_tools{
 
     
     enum class KILL_TYPES {NONE,FIXED_FAILURES,SMTBF,MTBF,RESERVATION};
-    enum class call_me_later_types {FIXED_FAILURE,SMTBF,MTBF,REPAIR_DONE,RESERVATION_START,CHECKPOINT_BATSCHED,RECOVER_FROM_CHECKPOINT};
+    enum class call_me_later_types {FIXED_FAILURE,SMTBF,MTBF,REPAIR_DONE,RESERVATION_START,CHECKPOINT_SYNC,CHECKPOINT_BATSCHED,RECOVER_FROM_CHECKPOINT};
     enum class REJECT_TYPES
     {
         NOT_ENOUGH_RESOURCES
@@ -40,6 +40,7 @@ namespace batsim_tools{
       int minutes=0;
       int seconds=0;
       int total_seconds =0;
+      bool once = false;
       std::string raw   ="";
       std::string type  ="null";
       int nb_checkpoints=0;

@@ -257,9 +257,10 @@ Output options:
 Checkpoint Batsim options:
   --checkpoint-batsim-interval <string>     Will checkpoint batsim at <string> regular intervals
                                             Where <string> is in format:
-                                            "(real|simulated):days-HH:MM:SS[:keep]"
+                                            "(real|simulated)[:once]:days-HH:MM:SS[:keep]"
                                             'real' prepended will interpret the interval to be in real time
                                             'simulated' prepended will interpret the interval to be in simulated time
+                                            optional :once will do one checkpoint and then stop doing any more checkpoints
                                             optional :keep will set the amount of checkpoints to keep.  --checkpoint-batsim-keep trumps this
                                             False turns off
                                             [default: False]
@@ -601,18 +602,19 @@ Reservation Options:
 
    if (main_args.chkpt_interval.raw != "False")
    {
-        const boost::regex r(R"(^(real|simulated):([0-9]+)[-]([0-9]+):([0-9]+):([0-9]+)(?:$|(?:[:]([0-9]+))))");
+        const boost::regex r(R"(^(real|simulated)(:once)?:([0-9]+)[-]([0-9]+):([0-9]+):([0-9]+)(?:$|(?:[:]([0-9]+))))");
         boost::smatch sm;
         if (boost::regex_search(main_args.chkpt_interval.raw,sm,r))
         {
             main_args.chkpt_interval.type = sm[1];
-            main_args.chkpt_interval.days = std::stoi(sm[2]);
-            main_args.chkpt_interval.hours = std::stoi(sm[3]);
-            main_args.chkpt_interval.minutes = std::stoi(sm[4]);
-            main_args.chkpt_interval.seconds = std::stoi(sm[5]);
-            if (sm[6]!="" && main_args.chkpt_interval.keep == -1)//keep will already be set if explicitly set with --checkpoint-batsim-keep
+            main_args.chkpt_interval.once = sm[2]==":once" ? true : false;
+            main_args.chkpt_interval.days = std::stoi(sm[3]);
+            main_args.chkpt_interval.hours = std::stoi(sm[4]);
+            main_args.chkpt_interval.minutes = std::stoi(sm[5]);
+            main_args.chkpt_interval.seconds = std::stoi(sm[6]);
+            if (sm[7]!="" && main_args.chkpt_interval.keep == -1)//keep will already be set if explicitly set with --checkpoint-batsim-keep
                                                                  //and that takes precedence, otherwise it will equal -1 and we can overwrite it
-                main_args.chkpt_interval.keep = std::stoi(sm[6]);
+                main_args.chkpt_interval.keep = std::stoi(sm[7]);
             main_args.chkpt_interval.total_seconds = main_args.chkpt_interval.seconds + 
                                                     main_args.chkpt_interval.minutes*60 +
                                                     main_args.chkpt_interval.hours*3600 + 
@@ -1606,6 +1608,7 @@ void write_to_config(BatsimContext *context,
     Value chkpt_json(rapidjson::kObjectType);
     chkpt_json.AddMember("raw",Value().SetString(main_args.chkpt_interval.raw.c_str(),alloc),alloc);
     chkpt_json.AddMember("type",Value().SetString(main_args.chkpt_interval.type.c_str(),alloc),alloc);
+    chkpt_json.AddMember("once",Value().SetBool(main_args.chkpt_interval.once),alloc);
     chkpt_json.AddMember("days",Value().SetInt(main_args.chkpt_interval.days),alloc);
     chkpt_json.AddMember("hours",Value().SetInt(main_args.chkpt_interval.hours),alloc);
     chkpt_json.AddMember("minutes",Value().SetInt(main_args.chkpt_interval.minutes),alloc);
