@@ -176,6 +176,8 @@ struct MainArguments
     long svg_frame_end = -1;
     long svg_output_start = 1;
     long svg_output_end = -1;
+    double svg_time_start = 0.0;
+    double svg_time_end = -1.0;
     std::string repair_time_file = "none";
     int scheduler_queue_depth = -1;
     bool subtract_progress_from_walltime = false;

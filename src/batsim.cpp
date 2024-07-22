@@ -238,14 +238,23 @@ Output options:
   --output-svg-method <string>       Output schedule as (svg || text || both)
                                      [default: svg]
   --svg-frame-start <INT>            What frame number to start outputing svgs
+                                     Frame number is incremented every time make_decisions is entered
                                      [default: 1]
   --svg-frame-end <INT>              What frame number to end outputing svgs
                                      '-1' is to the end.
+                                     Frame number is incremented every time make_decisions is entered
                                      [default: -1]
   --svg-output-start <INT>           What output number to start outputing svgs
+                                     Output number is incremented every time an svg is made
                                      [default: 1]
   --svg-output-end <INT>             What output number to end outputing svgs
+                                     Output number is incremented every time an svg is made
                                      [default: -1]
+  --svg-time-start <FLOAT>           What simulated time to start outputing svgs
+                                     [default: 0.0]
+  --svg-time-end <FLOAT>             What simulated time to end outputing svgs. 
+                                     '-1.0' is to the end of the simulation, the default.
+                                     [default: -1.0]
   --turn-off-extra-info              Normally extra info: 
                                      '
                                      simulation time, jobs actually completed,real time,
@@ -521,6 +530,8 @@ Reservation Options:
    main_args.svg_frame_end = args["--svg-frame-end"].asLong();
    main_args.svg_output_start = args["--svg-output-start"].asLong();
    main_args.svg_output_end = args["--svg-output-end"].asLong();
+   main_args.svg_time_start = (double) std::atof(args["--svg-time-start"].asString().c_str());
+   main_args.svg_time_end = (double) std::atof(args["--svg-time-end"].asString().c_str());
    
    main_args.repair_time_file = args["--repair"].asString();
    main_args.scheduler_queue_depth = args["--queue-depth"].asLong();
@@ -1600,6 +1611,9 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("svg-frame-end",Value().SetInt(main_args.svg_frame_end),alloc);
     context->config_json.AddMember("svg-output-start",Value().SetInt(main_args.svg_output_start),alloc);
     context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
+    context->config_json.AddMember("svg-time-start",Value().SetDouble(main_args.svg_time_start),alloc);
+    context->config_json.AddMember("svg-time-end",Value().SetDouble(main_args.svg_time_end),alloc);
+
     context->config_json.AddMember("seed-repair-time",Value().SetInt(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);
     context->config_json.AddMember("reject-jobs-after-nb-repairs",Value().SetInt(main_args.reject_jobs_after_nb_repairs),alloc);
