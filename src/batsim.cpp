@@ -43,7 +43,6 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/join.hpp>
-
 #include "batsim.hpp"
 #include "context.hpp"
 #include "event_submitter.hpp"
