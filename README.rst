@@ -1,6 +1,11 @@
 Batsim
 ======
 
+Copyright Notice
+----------------
+Copyright © 2024 Triad National Security, LLC.
+Release Approved Under O#4697 - LANL-contributed enhancements to BatSim toolstack.
+
 |chat| |doc| |external-issues| |internal-issues| |license|
 
 |last-release| |distance-from-previous-release| |pipeline-status| |coverage|
