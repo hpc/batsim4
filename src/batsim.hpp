@@ -185,6 +185,7 @@ struct MainArguments
     batsim_tools::batsim_chkpt_interval chkpt_interval;
     int start_from_checkpoint = -1;
     int checkpoint_signal=35;
+    bool set_generators_from_file = false;
     
 
 

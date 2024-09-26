@@ -1597,11 +1597,13 @@ void JsonProtocolReader::handle_notify(int event_number,
     {
       auto * message = new CallMeLaterMessage;
 
-        
+        std::string path = data_object["data"].GetString();
         message->target_time = simgrid::s4u::Engine::get_clock();
         message->forWhat = static_cast<int>(batsim_tools::call_me_later_types::RECOVER_FROM_CHECKPOINT);
         message->id = 1; //this value doesn't really matter.  If the frequency of checkpoints was high, it may matter.
+        
         send_message_at_time(timestamp, "server", IPMessageType::SCHED_CALL_ME_LATER, static_cast<void*>(message));
+        ingest_variables(path);
     }
     else
     {
@@ -1610,6 +1612,52 @@ void JsonProtocolReader::handle_notify(int event_number,
 
     (void) timestamp;
 }
+void JsonProtocolReader::ingest_variables(std::string filename)
+{
+
+/* Call me laters don't need to be ingested as they are dispatched from batsched
+
+  rapidjson::Document batsim_variables_doc = ingestDoc(filename);
+
+  rapidjson::Value &json  = batsim_variables_doc["call_me_laters"];
+  context->call_me_laters.clear();
+  const rapidjson::Value & array = json.GetArray();
+        if (!array.Empty())
+        {
+            for (rapidjson::SizeType i=0;i<array.Size();i++)
+            {
+                batsim_tools::call_me_later_data * cml = new batsim_tools::call_me_later_data;
+                cml->date_received = array[i]["date_received"].GetDouble();
+                cml->target_time = array[i]["target_time"].GetDouble();
+                cml->forWhat = static_cast<batsim_tools::call_me_later_types>(array[i]["forWhat"].GetInt());
+                cml->extra_data = array[i]["extra_data"].GetString();
+                cml->id = array[i]["id"].GetInt();
+
+                context->call_me_laters.insert(std::pair(cml->target_time,cml));
+            }
+        }
+*/
+}
+rapidjson::Document JsonProtocolReader::ingestDoc(std::string filename)
+{
+  std::string content;
+  std::ifstream ifile;
+  ifile.open(filename);
+  
+
+  ifile.seekg(0, ios::end);
+  content.reserve(static_cast<unsigned long>(ifile.tellg()));
+  ifile.seekg(0, ios::beg);
+
+  content.assign((std::istreambuf_iterator<char>(ifile)),
+              std::istreambuf_iterator<char>());
+
+  ifile.close();
+  rapidjson::Document jsonDoc;
+  jsonDoc.Parse(content.c_str());
+  return jsonDoc;
+}
+
 
 void JsonProtocolReader::handle_to_job_msg(int event_number,
                                        double timestamp,

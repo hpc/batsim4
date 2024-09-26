@@ -679,8 +679,7 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                 runtime=0;
                 
                 future_allocation=pair.second->future_allocation.to_string_hyphen();
-                original_walltime = pair.second->original_walltime == -1.0 ? pair.second->walltime : pair.second->original_walltime;
-
+                
                 
                 
                 if (pair.second->state == JobState::JOB_STATE_RUNNING)
@@ -703,6 +702,11 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     allocation = "null";
     
                 }
+                if (running)
+                    original_walltime = pair.second->original_walltime == -1.0 ? pair.second->walltime : pair.second->original_walltime;
+                else
+                    original_walltime = -1.0;
+
 
                 /*****************************     Making Modified Profile    ********************************/
 
@@ -715,9 +719,17 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     type = "delay";
                     cpuDelay = data->delay;
                     realCpuDelay = data->real_delay;
-                    originalCpuDelay = data->original_delay == -1.0 ? data->delay : data->original_delay;
-                    originalRealCpuDelay = data->original_real_delay == -1.0 ? data->real_delay : data->original_real_delay;
-                    
+                    if (running)
+                    {
+                        originalCpuDelay = data->original_delay == -1.0 ? data->delay : data->original_delay;
+                        originalRealCpuDelay = data->original_real_delay == -1.0 ? data->real_delay : data->original_real_delay;
+                    }
+                    else
+                    {
+                        originalCpuDelay = -1.0;
+                        originalRealCpuDelay = -1.0;
+                    }
+                                        
                     //now lets change these values based on progress
                     progressTimeCpu = cpuDelay*progress; //multiply by progress
                     newProgressTimeCpu = progressTimeCpu + pair.second->checkpoint_job_data->progressTimeCpu;
@@ -741,8 +753,18 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                     type = "parallel_homogeneous";
                     cpuDelay = data->cpu;
                     realCpuDelay = data->real_cpu;
-                    originalCpuDelay = data->original_cpu == -1.0 ? data->cpu : data->original_cpu;
-                    originalRealCpuDelay = data->original_real_cpu == -1.0 ? data->real_cpu : data->original_real_cpu;
+                    //if the job is running we need to know what the original_cpu is if it is killed and resubmitted
+                    if (running)
+                    {
+                        originalCpuDelay = data->original_cpu == -1.0 ? data->cpu : data->original_cpu;
+                        originalRealCpuDelay = data->original_real_cpu == -1.0 ? data->real_cpu : data->original_real_cpu;
+                    }
+                    else
+                    {
+                        originalCpuDelay = -1.0;
+                        originalRealCpuDelay = -1.0;
+                    }
+                    
                     com = data->com;
                     //now lets change these values based on progress
                     progressTimeCpu = cpuDelay*progress;  //multiply by progress
@@ -801,10 +823,8 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
                         <<"\t\t\t"  << "\"starting_time\":"         <<  pair.second->starting_time      <<","<<std::endl
                         <<"\t\t\t"  << "\"original_walltime\":"     <<  original_walltime               <<","<<std::endl
                         <<"\t\t\t"  << "\"original_start\":"        <<  original_start                  <<","<<std::endl
-                        <<"\t\t\t"  << "\"original_submit\":"       <<  original_submit                 <<std::endl;
-
-               
-                
+                        <<"\t\t\t"  << "\"original_submit\":"       <<  original_submit                 <<","<<std::endl
+                        <<"\t\t\t"  << "\"from_workload\":"         <<  "false"                         <<std::endl;
 
             }
             
@@ -855,7 +875,7 @@ bool Workload::write_out_batsim_checkpoint(const std::string checkpoint_dir)
         if (f.is_open())
         {
             f<<"{\n"
-                <<"\t\"call_me_laters\":"<<batsim_tools::multimap_to_string(this->context->call_me_laters)<<std::endl
+                <<"\t\"call_me_laters\":"<<batsim_tools::cmls_to_string(this->context->call_me_laters)<<std::endl
             <<"}";
             f.close();
         }

@@ -4,6 +4,7 @@
 #include "sys/sysinfo.h"
 #include <iostream>
 #include <unistd.h>
+#include <regex>
 class JobIdentifier;
 struct BatTask;
 
@@ -155,12 +156,16 @@ std::string inline to_string<std::string>(std::string value)
 template<>
 std::string inline to_string<batsim_tools::call_me_later_data*>(batsim_tools::call_me_later_data* cml)
 {
+    std::string extra_data = cml->extra_data;
+    extra_data = std::regex_replace( extra_data, std::regex( "\"" ), "\\\"" );
     std::string cml_string = batsim_tools::string_format("{"
                                                             "\"target_time\": %.15f,"
                                                             "\"date_received\": %.15f,"
                                                             "\"forWhat\": %d,"
-                                                            "\"id\": %d"
-                                                          "}",cml->target_time,cml->date_received,cml->forWhat,cml->id);
+                                                            "\"id\": %d,"
+                                                            "\"extra_data\": \"%s\""
+                                                          "}",cml->target_time,cml->date_received,
+                                                                cml->forWhat,cml->id,extra_data.c_str());
     return cml_string;
     
 }
@@ -355,6 +360,20 @@ std::string to_string(std::pair<K,V> pair)
         ourString = ourString + "}";
         return ourString;
     }
+template<typename K, typename V,typename Comp>
+std::string cmls_to_string(const std::multimap<K,V,Comp> &ms)
+{
+    std::string ourString="[";
+    bool first = true;
+    for(std::pair<K,V> kv_pair:ms)
+    {
+        if (!first)
+            ourString = ourString + ","; first = false;
+        ourString = ourString + batsim_tools::to_string(kv_pair.second);
+    }
+    ourString = ourString + "]";
+    return ourString;
+}
 template<typename K, typename V,typename Comp>
 std::string multimap_to_string(const std::multimap<K,V,Comp> &ms)
 {

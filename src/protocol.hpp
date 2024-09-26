@@ -546,6 +546,20 @@ public:
     void handle_notify(int event_number, double timestamp, const rapidjson::Value & data_object);
 
     /**
+     * @brief Handles a recover from checkpoint NOTIFY event
+     * 
+     * @param filename The path to the file to get batsim_variables to ingest (from starting from a checkpoint)
+     */
+    void ingest_variables(std::string filename);
+
+    /**
+     * @brief Handles getting a document from a json file
+     * 
+     * @param filename The path to the json file
+     * @return rapidjson::Document the parsed document
+     */
+    rapidjson::Document ingestDoc(std::string filename);
+    /**
      * @brief Handles a TO_JOB_MSG event
      * @param[in] event_number The event number in [0,nb_events[.
      * @param[in] timestamp The event timestamp

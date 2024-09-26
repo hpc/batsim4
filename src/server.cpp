@@ -9,6 +9,7 @@
 #include <set>
 #include <memory>
 #include <ctime>
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 
@@ -287,6 +288,27 @@ void server_on_job_completed(ServerData * data,
             data->context->start_from_checkpoint.nb_actually_completed = actually_completed_jobs
                  + (data->context->start_from_checkpoint.nb_previously_completed);
             double percent = (double(actually_completed_jobs)/double(data->context->nb_jobs)) *100.0;
+            double overall_percent=percent;
+            int nb_orig_jobs = data->context->nb_jobs;
+            int nb_actually_completed = actually_completed_jobs;
+            int nb_checkpoint=0;
+            if (data->context->start_from_checkpoint.started_from_checkpoint)
+            {
+                overall_percent = (double(data->context->start_from_checkpoint.nb_actually_completed)/
+                                          double(data->context->start_from_checkpoint.nb_original_jobs))*100.0;
+                nb_orig_jobs = data->context->start_from_checkpoint.nb_original_jobs;
+                nb_actually_completed = data->context->start_from_checkpoint.nb_actually_completed;
+                nb_checkpoint = data->context->start_from_checkpoint.nb_checkpoint;
+            }
+            std::chrono::time_point<std::chrono::high_resolution_clock> now = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed=now - data->context->simulation_start_time;
+            auto diffsec = std::chrono::duration_cast<std::chrono::seconds>(elapsed);
+            int totalSecond = diffsec.count();
+            int d = (totalSecond /(24*3600));
+            int h = (totalSecond % (24*3600)) / 3600;
+            int m = (totalSecond % 3600) / 60;
+            int s = totalSecond % 60;
+            std::string elapsed_time = batsim_tools::string_format("%dd-%02d:%02d:%02d",d,h,m,s);
             f<<std::fixed<<std::setprecision(10)
                 <<actually_completed_jobs<<","<<data->context->nb_jobs<<","<<std::setprecision(2)<<percent
                 <<","<<std::fixed<<std::setprecision(10)<<real_time<<","<<double(simgrid::s4u::Engine::get_clock())
@@ -295,6 +317,8 @@ void server_on_job_completed(ServerData * data,
                 <<","<<node_mem.total<<","<<node_mem.available
                 <<","<<batsim_mem.USS<<","<<batsim_mem.PSS<<","<<batsim_mem.RSS
                 <<","<<batsched_mem.USS<<","<<batsched_mem.PSS<<","<<batsched_mem.RSS
+                <<","<<elapsed_time<<","<<nb_orig_jobs<<","<<nb_actually_completed<<","<<nb_checkpoint
+                <<","<<std::setprecision(2)<<overall_percent
                 <<std::endl;
             f.close();
         }

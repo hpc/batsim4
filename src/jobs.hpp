@@ -272,6 +272,7 @@ struct Job
     IntervalSet future_allocation; //!< The future allocation of a job (reservation)
     std::vector<double> submission_times;
     std::string jitter = "";
+    bool from_workload=false;
     struct batsim_tools::checkpoint_job_data * checkpoint_job_data = nullptr; //!< Used for batsim-checkpointing
 public:
     /**

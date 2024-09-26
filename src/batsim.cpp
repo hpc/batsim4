@@ -439,6 +439,7 @@ Failure Options:
                                      ORIGINAL-FCFS would put resubmitted jobs at the front of the queue
                                      based on their original submit time.
                                      [default: FCFS]
+  --set-generators-from-file         If flag is set will start generators from the _output_folder/*.dat files
  
 Schedule Options:
   --queue-depth <int>               The amount of items in the queue that will be scheduled at a time
@@ -544,6 +545,7 @@ Reservation Options:
    main_args.checkpoint_signal = args["--checkpoint-batsim-signal"].asLong();
    main_args.queue_policy = args["--queue-policy"].asString();
    main_args.failures_file = args["--failures-from-file"].asString();
+   main_args.set_generators_from_file = args["--set-generators-from-file"].asBool();
    std::signal(main_args.checkpoint_signal,on_signal_checkpoint);
    std::string copy = args["--copy"].asString();
    std::string submission_time_after = args["--submission-time-after"].asString();
@@ -1030,7 +1032,7 @@ Reservation Options:
         if (f.is_open())
         {
             f<<"actually_completed_jobs,nb_jobs,percent_done,real_time,sim_time,queue_size,schedule_size,nb_jobs_running,utilization,utilization_without_resv,"
-            <<"node_mem_total,node_mem_available,batsim_USS,batsim_PSS,batsim_RSS,batsched_USS,batsched_PSS,batsched_RSS"<<std::endl;
+            <<"node_mem_total,node_mem_available,batsim_USS,batsim_PSS,batsim_RSS,batsched_USS,batsched_PSS,batsched_RSS,elapsed_time,nb_orig_jobs,tot_actually_completed,nb_checkpoint,overall_percent"<<std::endl;
             f.close();
         }
     }
@@ -1592,6 +1594,7 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("repair_time", Value().SetDouble(main_args.repair_time),alloc);
     context->config_json.AddMember("fixed_failures",Value().SetDouble(main_args.fixed_failures),alloc);
     context->config_json.AddMember("failure-from-file",Value().SetString(main_args.failures_file.c_str(),alloc),alloc);
+    context->config_json.AddMember("set-generators-from-file",Value().SetBool(main_args.set_generators_from_file),alloc);
     context->config_json.AddMember("log_b_log",Value().SetBool(main_args.log_b_log),alloc);
     
 
@@ -1612,6 +1615,7 @@ void write_to_config(BatsimContext *context,
     context->config_json.AddMember("svg-output-end",Value().SetInt(main_args.svg_output_end),alloc);
     context->config_json.AddMember("svg-time-start",Value().SetDouble(main_args.svg_time_start),alloc);
     context->config_json.AddMember("svg-time-end",Value().SetDouble(main_args.svg_time_end),alloc);
+    context->config_json.AddMember("output-extra-info",Value().SetBool(main_args.output_extra_info),alloc);
 
     context->config_json.AddMember("seed-repair-time",Value().SetInt(main_args.seed_repair_time),alloc);
     context->config_json.AddMember("MTTR",Value().SetDouble(main_args.MTTR),alloc);

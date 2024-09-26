@@ -481,6 +481,11 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
     j->state = JobState::JOB_STATE_NOT_SUBMITTED;
     j->consumed_energy = -1;
 
+    if (json_desc.HasMember("from_workload") && json_desc["from_workload"].IsBool())
+        j->from_workload = json_desc["from_workload"].GetBool();
+    else
+        j->from_workload = true;
+
     xbt_assert(json_desc.IsObject(), "%s: one job is not an object", error_prefix.c_str());
 
     // Get job id and create a JobIdentifier
@@ -635,12 +640,13 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         }
         
     }
-    if (json_desc.HasMember("alloc"))
+    if (json_desc.HasMember("future_allocation"))
     {
-        xbt_assert(json_desc["alloc"].IsString(), "%s: job '%s' has a non-string 'alloc' field",
+        xbt_assert(json_desc["future_allocation"].IsString(), "%s: job '%s' has a non-string 'alloc' field",
                     error_prefix.c_str(), j->id.to_string().c_str());
-        std::string myAlloc = json_desc["alloc"].GetString();
-        j->future_allocation = IntervalSet::from_string_hyphen(myAlloc," ","-");
+        std::string myAlloc = json_desc["future_allocation"].GetString();
+        if (!myAlloc.empty())
+            j->future_allocation = IntervalSet::from_string_hyphen(myAlloc," ","-");
     }
     //CCU-LANL Additions
     //if we are starting from a checkpoint lets add things to a job's attributes 
@@ -719,6 +725,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
         json_desc_copy.AddMember("submission_times",sub_times,json_desc_copy.GetAllocator());
     if (json_desc_copy.HasMember("start"))
         json_desc_copy["start"]=j->start;
+    if (!(json_desc_copy.HasMember("from_workload")))
+        json_desc_copy.AddMember("from_workload",Value().SetBool(j->from_workload),json_desc_copy.GetAllocator());
     //we need to update the job_id and profile name in json_desc because of checkpointing-batsim
     rapidjson::Value new_job_id;
     new_job_id.SetString(j->id.to_string().c_str(),json_desc_copy.GetAllocator());
@@ -897,7 +905,9 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
             
             
             //do this only if it is a non-resubmitted job (it won't have a # in its name)
-            if (j->id.job_name().find("#")== std::string::npos)
+            //if (j->id.job_name().find("#")== std::string::npos)
+            //changed it
+            if (j->from_workload)
             {
                 if (pf != 1.0){ //update times with _performance_factor
                 j->dump_time = pf * j->dump_time;
@@ -906,7 +916,7 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 
             //if we need to compute the optimal checkpointing, do it here
             
-            if (workload->_compute_checkpointing)
+            if (workload->_compute_checkpointing && j->from_workload)
             {
                 //it is computed using MTBF or SMTBF, make sure one of them is set
                 xbt_assert(workload->_MTBF != -1.0 || workload->_SMTBF != -1.0,"ERROR  --compute-checkpointing flag was set, but no (S)MTBF set");
@@ -931,14 +941,15 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
             XBT_INFO("job %s  checkpoint_interval:%f",j->id.job_name().c_str(),j->checkpoint_interval);
             //get the job's profile data
             ParallelHomogeneousProfileData * data =static_cast<ParallelHomogeneousProfileData *>(j->profile->data);
-            //only change times if original_cpu is not set (not a start-from-checkpoint)
-            if (data->original_cpu == -1.0)
+            //only change times if original_cpu is not set (not a start-from-checkpoint) and not resubmitted job
+            if (data->original_cpu == -1.0 && j->from_workload)
             {
                 //delay will be changing since we are checkpointing
                 double cpu = data->cpu;
                 int subtract = 0;
                 //save the delay as the real delay -- the actual amount of work to be done
                 data->real_cpu = cpu;
+                //convert to time
                 double delay = cpu/one_second;
                 //if no extra time after checkpoint, then no need to do that checkpoint
                 if (std::fmod(delay,j->checkpoint_interval) == 0)
@@ -946,9 +957,11 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 //delay is how many checkpoints are needed  * how long it takes to dump + the original delay time
                 if (floor(delay/j->checkpoint_interval)>0)
                     delay = (floor(delay / j->checkpoint_interval) - subtract )* j->dump_time + delay;
+                //convert back to flops
                 data->cpu = delay * one_second;
                 profile_doc["cpu"]=delay * one_second;
-                profile_doc.AddMember("original_cpu",Value().SetDouble(data->real_cpu),profile_doc.GetAllocator());
+                profile_doc.AddMember("original_cpu",Value().SetDouble(-1.0),profile_doc.GetAllocator());
+                profile_doc.AddMember("original_real_cpu",Value().SetDouble(-1.0),profile_doc.GetAllocator());
                 j->profile->json_description = Job::to_json_desc(& profile_doc);
                 j->profile->data = data;
                 XBT_INFO("Total delay %f, Total cpu %f",delay,delay * one_second);
