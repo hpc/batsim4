@@ -957,6 +957,8 @@ JobPtr Job::from_json(const rapidjson::Value & json_desc,
                 //delay is how many checkpoints are needed  * how long it takes to dump + the original delay time
                 if (floor(delay/j->checkpoint_interval)>0)
                     delay = (floor(delay / j->checkpoint_interval) - subtract )* j->dump_time + delay;
+                if (j->walltime > 0)
+                    j->walltime = (floor(delay / j->checkpoint_interval) - subtract )* j->dump_time + j->walltime;
                 //convert back to flops
                 data->cpu = delay * one_second;
                 profile_doc["cpu"]=delay * one_second;
