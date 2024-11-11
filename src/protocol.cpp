@@ -1573,6 +1573,10 @@ void JsonProtocolReader::handle_notify(int event_number,
             }
           }
         }
+        else
+        {
+         fs::remove_all(checkpoint_base+batsim_tools::chkpt_name(0));
+        }
         //we keep moving checkpoint_1 down the line, so we need to keep creating checkpoint_1
         fs::create_directories(checkpoint_dir);
       
