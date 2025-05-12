@@ -270,9 +270,9 @@ struct Job
     std::string purpose = "job"; //the purpose ("job" || "reservation")
     double start = -1.0; //when a job will start (reservation)
     IntervalSet future_allocation; //!< The future allocation of a job (reservation)
-    std::vector<double> submission_times;
-    std::string jitter = "";
-    bool from_workload=false;
+    std::vector<double> submission_times;  // a vector of submission times, showing what times the job has been killed and resubmitted.
+    std::string jitter = ""; //how much to add/subtract from submission time.  Used with '--copy' option
+    bool from_workload=false; //whether or not the job was from a workload, or a dynamic job
     struct batsim_tools::checkpoint_job_data * checkpoint_job_data = nullptr; //!< Used for batsim-checkpointing
 public:
     /**

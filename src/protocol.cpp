@@ -1584,6 +1584,8 @@ void JsonProtocolReader::handle_notify(int event_number,
         context->jobs_tracer.flush_close_reopen();
         if (fs::exists(prefix+"/out_jobs.csv"))
           fs::copy_file(prefix+"/out_jobs.csv",checkpoint_dir+"/out_jobs.csv",fs::copy_options::overwrite_existing);
+        if (fs::exists(prefix+"/metrics.csv"))
+          fs::copy_file(prefix+"/metrics.csv",checkpoint_dir+"/metrics.csv",fs::copy_options::overwrite_existing);
         Workload * w0 = context->workloads["w0"];
         w0->write_out_batsim_checkpoint(checkpoint_dir);
         
